@@ -1,0 +1,37 @@
+growth_curves:
+  policies:
+    curve_type: ramp_with_seasonality
+    floor: 90000
+    ceiling: 600000
+    midpoint_year: 2024
+    growth_rate: 1.20
+    seasonality_amplitude: 0.12
+    trend_strength: 0.06
+
+  brokers:
+    curve_type: ramp_with_waves
+    start_count: 500
+    end_count: 5000
+    hiring_waves:
+      - year: 2023
+        increment_pct: 0.12
+      - year: 2024
+        increment_pct: 0.15
+      - year: 2025
+        increment_pct: 0.13
+
+  underwriters:
+    curve_type: ramp_with_waves
+    start_count: 250
+    end_count: 2400
+    hiring_waves:
+      - year: 2023
+        increment_pct: 0.12
+      - year: 2024
+        increment_pct: 0.15
+      - year: 2025
+        increment_pct: 0.13
+
+  scale_constraints:
+    policies_to_underwriters_min_ratio: 250
+    policies_to_brokers_min_ratio: 120

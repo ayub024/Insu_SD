@@ -1,0 +1,12 @@
+# Geography allocation from the spec (must sum to 100%).
+geo_distribution:
+  # Midwest share of synthetic business volume.
+  Midwest: 40
+  # Southeast share of synthetic business volume.
+  Southeast: 25
+  # Northeast share of synthetic business volume.
+  Northeast: 15
+  # Southwest share of synthetic business volume.
+  Southwest: 10
+  # West share of synthetic business volume.
+  West: 10

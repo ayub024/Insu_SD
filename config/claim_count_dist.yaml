@@ -1,0 +1,63 @@
+# Claim-count distribution per product for policies that have at least one claim.
+# pct_4_plus represents the 4+ claims bucket.
+claim_count_distribution:
+  - product_name: "Building & Contents"
+    pct_1_claim: 70
+    pct_2_claim: 20
+    pct_3_claim: 8
+    pct_4_plus: 2
+  - product_name: "Business Interruption"
+    pct_1_claim: 85
+    pct_2_claim: 12
+    pct_3_claim: 3
+    pct_4_plus: 0
+  - product_name: "Inland Marine"
+    pct_1_claim: 75
+    pct_2_claim: 18
+    pct_3_claim: 7
+    pct_4_plus: 0
+  - product_name: "General Liability"
+    pct_1_claim: 80
+    pct_2_claim: 15
+    pct_3_claim: 5
+    pct_4_plus: 0
+  - product_name: "Commercial Auto Liability"
+    pct_1_claim: 65
+    pct_2_claim: 25
+    pct_3_claim: 8
+    pct_4_plus: 2
+  - product_name: "Umbrella / Excess"
+    pct_1_claim: 90
+    pct_2_claim: 8
+    pct_3_claim: 2
+    pct_4_plus: 0
+  - product_name: "Homeowners"
+    pct_1_claim: 75
+    pct_2_claim: 18
+    pct_3_claim: 7
+    pct_4_plus: 0
+  - product_name: "Renters"
+    pct_1_claim: 85
+    pct_2_claim: 12
+    pct_3_claim: 3
+    pct_4_plus: 0
+  - product_name: "Condo"
+    pct_1_claim: 80
+    pct_2_claim: 15
+    pct_3_claim: 5
+    pct_4_plus: 0
+  - product_name: "Personal Auto"
+    pct_1_claim: 60
+    pct_2_claim: 25
+    pct_3_claim: 10
+    pct_4_plus: 5
+  - product_name: "Personal Umbrella"
+    pct_1_claim: 92
+    pct_2_claim: 6
+    pct_3_claim: 2
+    pct_4_plus: 0
+  - product_name: "Motorcycle / Recreational"
+    pct_1_claim: 70
+    pct_2_claim: 20
+    pct_3_claim: 10
+    pct_4_plus: 0

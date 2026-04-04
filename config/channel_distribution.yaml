@@ -1,0 +1,19 @@
+channel_distribution:
+  Direct:
+    min_pct: 40
+    max_pct: 60
+    target_pct: 52
+  Broker:
+    min_pct: 20
+    max_pct: 40
+    target_pct: 33
+  Bancassurance:
+    min_pct: 10
+    max_pct: 20
+    target_pct: 15
+
+channel_broker_rules:
+  require_broker_key_for_broker_channel: true
+  require_null_broker_key_for_direct_channel: true
+  require_active_channel: true
+  broker_region_must_match_geography: true

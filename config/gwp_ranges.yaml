@@ -1,0 +1,38 @@
+# Gross written premium (GWP) ranges from the spec, by product.
+gwp_ranges:
+  - product_name: "Building & Contents"
+    min_gwp: 8000
+    max_gwp: 25000
+  - product_name: "Business Interruption"
+    min_gwp: 3000
+    max_gwp: 12000
+  - product_name: "Inland Marine"
+    min_gwp: 2000
+    max_gwp: 10000
+  - product_name: "General Liability"
+    min_gwp: 5000
+    max_gwp: 20000
+  - product_name: "Commercial Auto Liability"
+    min_gwp: 4000
+    max_gwp: 15000
+  - product_name: "Umbrella / Excess"
+    min_gwp: 2500
+    max_gwp: 12000
+  - product_name: "Homeowners"
+    min_gwp: 900
+    max_gwp: 2500
+  - product_name: "Renters"
+    min_gwp: 150
+    max_gwp: 400
+  - product_name: "Condo"
+    min_gwp: 400
+    max_gwp: 1200
+  - product_name: "Personal Auto"
+    min_gwp: 1200
+    max_gwp: 3500
+  - product_name: "Personal Umbrella"
+    min_gwp: 250
+    max_gwp: 800
+  - product_name: "Motorcycle / Recreational"
+    min_gwp: 300
+    max_gwp: 1200

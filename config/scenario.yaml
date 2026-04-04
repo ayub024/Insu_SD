@@ -1,0 +1,82 @@
+scenario:
+  mode: prod
+  dev_mode: false
+  prod_mode: true
+  random_seed: 20260215
+
+  presets:
+    dev:
+      date_range:
+        start: "2022-01-01"
+        end: "2023-03-31"
+      target_scale:
+        total_policies: 15000
+        min_policy_to_underwriter_ratio: 250
+        min_policy_to_broker_ratio: 120
+      max_fact_rows_safety_limit: 120000
+    prod:
+      date_range:
+        start: "2022-01-01"
+        end: "2025-12-31"
+      target_scale:
+        total_policies: 200000
+        min_policy_to_underwriter_ratio: 250
+        min_policy_to_broker_ratio: 120
+      max_fact_rows_safety_limit: 1000000
+
+  date_range:
+    start: "2022-01-01"
+    end: "2025-12-31"
+
+  target_scale:
+    total_policies: 200000
+    min_policy_to_underwriter_ratio: 250
+    min_policy_to_broker_ratio: 120
+
+  max_fact_rows_safety_limit: 1000000
+
+  output:
+    output_formats: ["parquet", "csv"]
+    parquet_partition_fact_policy: true
+    parquet_partition_cols:
+      - year
+      - month
+
+  company:
+    name: "CinSure Ltd."
+    employees_total: 5624
+    underwriting_staff_pct_range: [0.28, 0.32]
+
+  geography:
+    regions:
+      Midwest: 0.40
+      Southeast: 0.25
+      Northeast: 0.15
+      Southwest: 0.10
+      West: 0.10
+
+  channels:
+    distribution:
+      Direct: 0.52
+      Broker: 0.33
+      Bancassurance: 0.15
+
+  claims:
+    zero_claim_rate_by_product:
+      "Building & Contents": 0.60
+      "Business Interruption": 0.75
+      "Inland Marine": 0.65
+      "General Liability": 0.70
+      "Commercial Auto Liability": 0.55
+      "Umbrella / Excess": 0.85
+      "Homeowners": 0.75
+      "Renters": 0.85
+      "Condo": 0.80
+      "Personal Auto": 0.55
+      "Personal Umbrella": 0.90
+      "Motorcycle / Recreational": 0.65
+
+  policy_rules:
+    policy_term_months: 12
+    cancellations_allowed: false
+    lapses_allowed: false

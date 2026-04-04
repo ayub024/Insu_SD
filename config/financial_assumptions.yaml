@@ -1,0 +1,246 @@
+financial_assumptions:
+  severity_scale: 0.70
+
+  severity_inflation_yoy:
+    base_year: 2022
+    annual_rate: 0.055
+
+  product_group_map:
+    "Building & Contents": property
+    "Business Interruption": property
+    "Inland Marine": property
+    "Homeowners": property
+    "Renters": property
+    "Condo": property
+    "General Liability": liability_umbrella
+    "Umbrella / Excess": liability_umbrella
+    "Personal Umbrella": liability_umbrella
+    "Commercial Auto Liability": auto
+    "Personal Auto": auto
+    "Motorcycle / Recreational": auto
+
+  seasonality_factors_by_product_group:
+    property:
+      1: 0.95
+      2: 0.96
+      3: 0.97
+      4: 0.98
+      5: 1.00
+      6: 1.03
+      7: 1.08
+      8: 1.14
+      9: 1.18
+      10: 1.12
+      11: 1.03
+      12: 0.97
+    auto:
+      1: 1.15
+      2: 1.10
+      3: 1.02
+      4: 0.98
+      5: 0.95
+      6: 0.94
+      7: 0.95
+      8: 0.97
+      9: 0.99
+      10: 1.04
+      11: 1.10
+      12: 1.18
+    liability_umbrella:
+      1: 1.00
+      2: 1.01
+      3: 1.01
+      4: 1.00
+      5: 0.99
+      6: 0.99
+      7: 1.00
+      8: 1.01
+      9: 1.02
+      10: 1.01
+      11: 1.00
+      12: 1.00
+
+  region_month_shock_factors:
+    Midwest:
+      12: 1.15
+      1: 1.18
+      2: 1.14
+    Southeast:
+      8: 1.18
+      9: 1.22
+      10: 1.16
+    West:
+      7: 1.15
+      8: 1.20
+      9: 1.16
+    Northeast:
+      12: 1.08
+      1: 1.10
+      2: 1.07
+    Southwest:
+      6: 1.05
+      7: 1.06
+      8: 1.05
+
+  cat_shock_year: 2025
+  cat_shock_multiplier_by_product_group:
+    property: 1.40
+    auto: 1.00
+    liability_umbrella: 1.00
+
+  ranges:
+    ceded_premium_pct_of_gwp:
+      min: 0.05
+      max: 0.20
+    recoveries_pct_of_incurred:
+      min: 0.05
+      max: 0.20
+    ibnr_pct_of_incurred:
+      min: 0.05
+      max: 0.15
+    paid_claim_pct_of_incurred:
+      min: 0.60
+      max: 0.75
+    outstanding_reserve_pct_of_incurred:
+      min: 0.15
+      max: 0.30
+    operating_expense_pct_of_earned:
+      min: 0.10
+      max: 0.15
+    acquisition_expense_pct_of_gwp:
+      min: 0.08
+      max: 0.12
+
+  dependencies:
+    reinsurance_recovery_formula: "incurred_claim_amount * ceded_premium_pct_of_gwp"
+    earned_premium_must_not_exceed_gwp: true
+    ceded_premium_must_not_exceed_gwp: true
+
+  product_adjustments:
+    severity_multiplier:
+      "Building & Contents": 1.12
+      "Business Interruption": 1.20
+      "Inland Marine": 1.05
+      "General Liability": 1.10
+      "Commercial Auto Liability": 1.16
+      "Umbrella / Excess": 1.22
+      "Homeowners": 1.10
+      "Renters": 0.88
+      "Condo": 0.92
+      "Personal Auto": 1.08
+      "Personal Umbrella": 1.10
+      "Motorcycle / Recreational": 0.90
+    recoveries_multiplier:
+      "Building & Contents": 1.00
+      "Business Interruption": 0.90
+      "Inland Marine": 1.05
+      "General Liability": 0.92
+      "Commercial Auto Liability": 1.00
+      "Umbrella / Excess": 0.85
+      "Homeowners": 1.00
+      "Renters": 1.05
+      "Condo": 1.00
+      "Personal Auto": 0.98
+      "Personal Umbrella": 0.95
+      "Motorcycle / Recreational": 0.97
+
+  segment_adjustments:
+    operating_expense_multiplier:
+      Retail: 1.00
+      SME: 1.05
+      Enterprise: 1.10
+
+  channel_adjustments:
+    acquisition_expense_multiplier:
+      Direct: 0.95
+      Broker: 1.10
+      Bancassurance: 1.00
+
+  policy_state_adjustments:
+    acquisition_expense_multiplier:
+      new_policy: 1.08
+      renewal: 0.92
+
+  claim_severity:
+    "Building & Contents":
+      severity_mean: 8.85
+      severity_sigma: 0.72
+      max_pct_of_gwp_cap: 4.50
+    "Business Interruption":
+      severity_mean: 9.25
+      severity_sigma: 1.00
+      max_pct_of_gwp_cap: 6.00
+    "Inland Marine":
+      severity_mean: 8.35
+      severity_sigma: 0.65
+      max_pct_of_gwp_cap: 3.50
+    "General Liability":
+      severity_mean: 9.00
+      severity_sigma: 0.80
+      max_pct_of_gwp_cap: 8.00
+    "Commercial Auto Liability":
+      severity_mean: 9.10
+      severity_sigma: 0.95
+      max_pct_of_gwp_cap: 5.50
+    "Umbrella / Excess":
+      severity_mean: 9.35
+      severity_sigma: 1.05
+      max_pct_of_gwp_cap: 15.00
+    "Homeowners":
+      severity_mean: 7.90
+      severity_sigma: 0.60
+      max_pct_of_gwp_cap: 6.50
+    "Renters":
+      severity_mean: 6.70
+      severity_sigma: 0.50
+      max_pct_of_gwp_cap: 4.00
+    "Condo":
+      severity_mean: 7.00
+      severity_sigma: 0.52
+      max_pct_of_gwp_cap: 4.50
+    "Personal Auto":
+      severity_mean: 8.00
+      severity_sigma: 0.65
+      max_pct_of_gwp_cap: 5.50
+    "Personal Umbrella":
+      severity_mean: 7.40
+      severity_sigma: 0.60
+      max_pct_of_gwp_cap: 20.00
+    "Motorcycle / Recreational":
+      severity_mean: 7.45
+      severity_sigma: 0.60
+      max_pct_of_gwp_cap: 5.00
+
+  large_loss_model:
+    default_large_loss_probability: 0.03
+    normal_bucket_probability: 0.97
+    large_loss_probability_by_product:
+      "Building & Contents": 0.06
+      "Business Interruption": 0.08
+      "Inland Marine": 0.05
+      "General Liability": 0.04
+      "Commercial Auto Liability": 0.07
+      "Umbrella / Excess": 0.08
+      "Homeowners": 0.06
+      "Renters": 0.01
+      "Condo": 0.015
+      "Personal Auto": 0.04
+      "Personal Umbrella": 0.05
+      "Motorcycle / Recreational": 0.01
+    tail_lognormal:
+      mean: 10.20
+      sigma: 1.10
+    max_multiple_of_gwp:
+      personal_lines: 10.0
+      commercial_lines: 20.0
+
+  yoy_premium_growth:
+    default_rate: 0.05
+    by_product:
+      "Building & Contents": 0.10
+      "Business Interruption": 0.08
+      "Commercial Auto Liability": 0.07
+      "General Liability": 0.06
+      "Personal Auto": 0.06
+      "Homeowners": 0.09
+      "Renters": 0.04

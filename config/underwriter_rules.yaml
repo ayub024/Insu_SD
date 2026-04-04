@@ -1,0 +1,54 @@
+underwriter_rules:
+  team_mapping:
+    "Commercial Property": "Commercial Property UW"
+    "Commercial Casualty": "Commercial Casualty UW"
+    "Personal Property": "Personal Lines UW"
+    "Personal Casualty": "Personal Lines UW"
+
+  region_alignment:
+    require_region_match_with_customer_or_segment: true
+    enforce_region_match: true
+
+  seniority_distribution_per_region:
+    Junior: 0.40
+    Mid: 0.35
+    Senior: 0.20
+    Lead: 0.05
+
+  high_premium_rule:
+    gwp_threshold: 15000
+    allowed_seniority_levels:
+      - Senior
+      - Lead
+
+  seniority_thresholds:
+    high:
+      min_gwp: 15000
+      allowed_seniority_levels:
+        - Senior
+        - Lead
+    medium:
+      min_gwp: 9000
+      allowed_seniority_levels:
+        - Mid
+        - Senior
+    low:
+      allowed_seniority_levels:
+        - Junior
+        - Mid
+
+  complexity_rules:
+    complex_products:
+      - "Business Interruption"
+      - "Umbrella / Excess"
+      - "Umbrella/Excess"
+      - "Commercial Auto Liability"
+    moderate_premium_min_gwp: 9000
+    seniority_bonus: 0.15
+
+  scoring_weights:
+    region_match: 0.30
+    team_specialization_match: 0.25
+    seniority_fit: 0.20
+    workload_balance: 0.10
+    complexity_fit: 0.15

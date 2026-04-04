@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Output and analysis files
+output/
+*.zip
+*.log
+analysis_output.json
+analysis_output_fixed.json
+
+# VS Code settings
+.vscode/
+
+# Ignore local config overrides (if any)

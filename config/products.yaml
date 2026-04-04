@@ -1,0 +1,61 @@
+products:
+  - product_key: "PRD01"
+    product_name: "Building & Contents"
+    line_of_business: "Commercial Property"
+    coverage_type: "Commercial"
+    pct_of_total_policies: 0.15
+  - product_key: "PRD02"
+    product_name: "Business Interruption"
+    line_of_business: "Commercial Property"
+    coverage_type: "Commercial"
+    pct_of_total_policies: 0.09
+  - product_key: "PRD03"
+    product_name: "Inland Marine"
+    line_of_business: "Commercial Property"
+    coverage_type: "Commercial"
+    pct_of_total_policies: 0.06
+  - product_key: "PRD04"
+    product_name: "General Liability"
+    line_of_business: "Commercial Casualty"
+    coverage_type: "Commercial"
+    pct_of_total_policies: 0.12
+  - product_key: "PRD05"
+    product_name: "Commercial Auto Liability"
+    line_of_business: "Commercial Casualty"
+    coverage_type: "Commercial"
+    pct_of_total_policies: 0.08
+  - product_key: "PRD06"
+    product_name: "Umbrella / Excess"
+    line_of_business: "Commercial Casualty"
+    coverage_type: "Commercial"
+    pct_of_total_policies: 0.05
+  - product_key: "PRD07"
+    product_name: "Homeowners"
+    line_of_business: "Personal Property"
+    coverage_type: "Personal"
+    pct_of_total_policies: 0.18
+  - product_key: "PRD08"
+    product_name: "Renters"
+    line_of_business: "Personal Property"
+    coverage_type: "Personal"
+    pct_of_total_policies: 0.04
+  - product_key: "PRD09"
+    product_name: "Condo"
+    line_of_business: "Personal Property"
+    coverage_type: "Personal"
+    pct_of_total_policies: 0.03
+  - product_key: "PRD10"
+    product_name: "Personal Auto"
+    line_of_business: "Personal Casualty"
+    coverage_type: "Personal"
+    pct_of_total_policies: 0.15
+  - product_key: "PRD11"
+    product_name: "Personal Umbrella"
+    line_of_business: "Personal Casualty"
+    coverage_type: "Personal"
+    pct_of_total_policies: 0.03
+  - product_key: "PRD12"
+    product_name: "Motorcycle / Recreational"
+    line_of_business: "Personal Casualty"
+    coverage_type: "Personal"
+    pct_of_total_policies: 0.02
