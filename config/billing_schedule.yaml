@@ -1,0 +1,12 @@
+billing_schedule:
+  default_frequency: monthly
+  default_installments: 12
+  collection_day_policy: policy_start_day
+  premium_split_method: equal_monthly
+  rounding:
+    method: final_installment_adjustment
+    decimals: 2
+  collection_behavior:
+    full_collection_probability: 1.0
+    partial_collection_probability: 0.0
+    failed_collection_probability: 0.0

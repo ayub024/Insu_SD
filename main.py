@@ -12,7 +12,7 @@ from typing import Any
 from core.growth_engine import GrowthEngine
 from core.progress_logger import log_month_summary, log_year_summary
 from core.world_state import WorldState
-from fact_builders.fact_policy_builder import build_fact_policy_rows
+from fact_builders.policy_transaction_event_builder import build_policy_transaction_event_rows
 from generators.claim_generator import generate_claims
 from generators.policy_generator import generate_monthly_policies
 from master_data.channel_master import build_dim_channel
@@ -128,12 +128,12 @@ def _new_year_accumulator() -> dict[str, Any]:
         "region_counter": Counter(),
         "financial_totals": {
             "gross_written_premium": 0.0,
-            "net_earned_premium": 0.0,
+            "premium_collected_amount": 0.0,
             "incurred_claim_amount": 0.0,
             "paid_claim_amount": 0.0,
-            "outstanding_reserve": 0.0,
             "ibnr_amount": 0.0,
-            "operating_expense": 0.0,
+            "underwriting_expense": 0.0,
+            "other_expense": 0.0,
             "acquisition_expense": 0.0,
             "ceded_premium": 0.0,
             "reinsurance_recovery": 0.0,
@@ -168,21 +168,20 @@ def _update_year_accumulator(
 
         incurred = float(r.get("incurred_claim_amount", 0.0) or 0.0)
         paid = float(r.get("paid_claim_amount", 0.0) or 0.0)
-        outstanding = float(r.get("outstanding_reserve", 0.0) or 0.0)
         ibnr = float(r.get("ibnr_amount", 0.0) or 0.0)
         recoveries = float(r.get("recoveries_amount", 0.0) or 0.0)
         reinsurance_recovery = float(r.get("reinsurance_recovery", 0.0) or 0.0)
-        if any(v > 0.0 for v in [incurred, paid, outstanding, ibnr, recoveries, reinsurance_recovery]):
+        if any(v > 0.0 for v in [incurred, paid, ibnr, recoveries, reinsurance_recovery]):
             stats["has_non_zero_claim"] = True
 
         ft = year_acc["financial_totals"]
         ft["gross_written_premium"] += float(r.get("gross_written_premium", 0.0) or 0.0)
-        ft["net_earned_premium"] += float(r.get("net_earned_premium", 0.0) or 0.0)
+        ft["premium_collected_amount"] += float(r.get("premium_collected_amount", 0.0) or 0.0)
         ft["incurred_claim_amount"] += incurred
         ft["paid_claim_amount"] += paid
-        ft["outstanding_reserve"] += outstanding
         ft["ibnr_amount"] += ibnr
-        ft["operating_expense"] += float(r.get("operating_expense", 0.0) or 0.0)
+        ft["underwriting_expense"] += float(r.get("underwriting_expense", 0.0) or 0.0)
+        ft["other_expense"] += float(r.get("other_expense", 0.0) or 0.0)
         ft["acquisition_expense"] += float(r.get("acquisition_expense", 0.0) or 0.0)
         ft["ceded_premium"] += float(r.get("ceded_premium", 0.0) or 0.0)
         ft["reinsurance_recovery"] += reinsurance_recovery
@@ -266,6 +265,7 @@ def run() -> dict[str, Any]:
             "dim_broker": initial_brokers,
             "dim_customer": [],
             "dim_underwriter": initial_underwriters,
+            "dim_claim": [],
         },
         output_dir="output",
         overwrite=True,
@@ -276,8 +276,9 @@ def run() -> dict[str, Any]:
     running_totals = {
         "fact_rows": 0,
         "incurred_claim_amount": 0.0,
-        "net_earned_premium": 0.0,
-        "operating_expense": 0.0,
+        "premium_collected_amount": 0.0,
+        "underwriting_expense": 0.0,
+        "other_expense": 0.0,
         "acquisition_expense": 0.0,
     }
 
@@ -362,7 +363,7 @@ def run() -> dict[str, Any]:
                 ws.register_claim_row(c)
 
             # build fact rows
-            fact_rows = build_fact_policy_rows(
+            fact_rows = build_policy_transaction_event_rows(
                 policy_rows=relevant_policies,
                 claim_rows=claim_rows,
                 world_state=ws,
@@ -406,8 +407,9 @@ def run() -> dict[str, Any]:
             for r in fact_rows:
                 running_totals["fact_rows"] += 1
                 running_totals["incurred_claim_amount"] += float(r.get("incurred_claim_amount", 0.0) or 0.0)
-                running_totals["net_earned_premium"] += float(r.get("net_earned_premium", 0.0) or 0.0)
-                running_totals["operating_expense"] += float(r.get("operating_expense", 0.0) or 0.0)
+                running_totals["premium_collected_amount"] += float(r.get("premium_collected_amount", 0.0) or 0.0)
+                running_totals["underwriting_expense"] += float(r.get("underwriting_expense", 0.0) or 0.0)
+                running_totals["other_expense"] += float(r.get("other_expense", 0.0) or 0.0)
                 running_totals["acquisition_expense"] += float(r.get("acquisition_expense", 0.0) or 0.0)
 
             if max_fact_rows_safety_limit is not None and running_totals["fact_rows"] >= int(max_fact_rows_safety_limit):
@@ -421,9 +423,13 @@ def run() -> dict[str, Any]:
 
         # Removed mid-loop dimension writing to vastly improve performance on multi-year Prod scale runs
         month_elapsed = time.perf_counter() - month_start_ts
-        cumulative_earned = float(running_totals["net_earned_premium"])
+        cumulative_earned = float(running_totals["premium_collected_amount"])
         cumulative_incurred = float(running_totals["incurred_claim_amount"])
-        cumulative_expenses = float(running_totals["operating_expense"] + running_totals["acquisition_expense"])
+        cumulative_expenses = float(
+            running_totals["underwriting_expense"]
+            + running_totals["other_expense"]
+            + running_totals["acquisition_expense"]
+        )
         cumulative_kpis = {
             "fact_rows": float(running_totals["fact_rows"]),
             "avg_incurred": (cumulative_incurred / running_totals["fact_rows"]) if running_totals["fact_rows"] > 0 else 0.0,
@@ -458,6 +464,7 @@ def run() -> dict[str, Any]:
     dim_broker = getattr(broker_master._instance(), "_rows", [])  # type: ignore[attr-defined]
     dim_underwriter = underwriter_master.get_active_underwriters(end_date.strftime("%Y-%m"))
     dim_customer = getattr(customer_master._instance(), "_rows", [])  # type: ignore[attr-defined]
+    dim_claim = list(ws.get("dim_claim_rows_by_key", {}).values())
 
     write_dimensions(
         {
@@ -469,6 +476,7 @@ def run() -> dict[str, Any]:
             "dim_broker": dim_broker,
             "dim_customer": dim_customer,
             "dim_underwriter": dim_underwriter,
+            "dim_claim": dim_claim,
         },
         output_dir="output",
         overwrite=True,

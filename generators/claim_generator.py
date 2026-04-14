@@ -118,7 +118,7 @@ def generate_claims(
     """Generate claim objects for policies.
 
     Rules:
-    - Product-specific share of policies produce exactly 1 zero-claim placeholder row.
+    - Product-specific share of policies produce no claim rows.
     - Remaining policies sample claim count by product from claim_count_dist.yaml.
     - 4+ claim bucket expands to {4,5,6} with weighted sampling.
     - Claim date is uniform random in [policy_start_date, policy_end_date].
@@ -141,15 +141,6 @@ def generate_claims(
 
         zero_claim_rate = float(_ZERO_CLAIM_RATE_BY_PRODUCT.get(product_name, 0.30))
         if np_rng.uniform(0.0, 1.0) < zero_claim_rate:
-            # Exactly one placeholder claim-row for zero-claim policies locked to term end date.
-            claims.append(
-                {
-                    "policy_key": policy_key,
-                    "claim_date": end_dt.isoformat(),
-                    "claim_index": 1,
-                    "is_zero_claim": True,
-                }
-            )
             continue
 
         claim_count = _claim_count_for_product(product_name, np_rng)

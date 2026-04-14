@@ -63,10 +63,17 @@ _DIM_SCHEMAS: dict[str, pa.Schema] = {
         [
             ("policy_key", pa.string()),
             ("policy_number", pa.string()),
+            ("policy_region", pa.string()),
             ("policy_status", pa.string()),
             ("policy_start_date", pa.date32()),
             ("policy_end_date", pa.date32()),
+            ("policy_lapsed_date", pa.date32()),
             ("tenure_years", pa.int32()),
+            ("renewal_cycle_number", pa.int32()),
+            ("sum_insured", pa.decimal128(15, 2)),
+            ("risk_band", pa.string()),
+            ("insured_asset", pa.string()),
+            ("insured_asset_details", pa.string()),
         ]
     ),
     "dim_product": pa.schema(
@@ -133,11 +140,23 @@ _DIM_SCHEMAS: dict[str, pa.Schema] = {
             ("manager_name", pa.string()),
         ]
     ),
+    "dim_claim": pa.schema(
+        [
+            ("claim_key", pa.int32()),
+            ("claim_type", pa.string()),
+            ("claim_details", pa.string()),
+            ("claim_date", pa.date32()),
+            ("claim_event_region", pa.string()),
+            ("event_severity", pa.string()),
+        ]
+    ),
 }
 
 _FACT_SCHEMA = pa.schema(
     [
-        ("id", pa.string()),
+        ("transaction_id", pa.string()),
+        ("transaction_domain", pa.string()),
+        ("transaction_type", pa.string()),
         ("policy_key", pa.string()),
         ("date_key", pa.int32()),
         ("product_key", pa.string()),
@@ -146,18 +165,23 @@ _FACT_SCHEMA = pa.schema(
         ("broker_key", pa.string()),
         ("customer_key", pa.string()),
         ("channel_key", pa.string()),
+        ("claim_key", pa.int32()),
+        ("pricing_decision_type", pa.string()),
+        ("quoted_price", pa.decimal128(15, 2)),
+        ("bind_price", pa.decimal128(15, 2)),
+        ("indicated_premium", pa.decimal128(15, 2)),
+        ("expected_loss", pa.decimal128(15, 2)),
+        ("underwriting_expense", pa.decimal128(15, 2)),
+        ("other_expense", pa.decimal128(15, 2)),
+        ("acquisition_expense", pa.decimal128(15, 2)),
         ("gross_written_premium", pa.decimal128(15, 2)),
+        ("premium_collected_amount", pa.decimal128(15, 2)),
         ("ibnr_amount", pa.decimal128(15, 2)),
         ("recoveries_amount", pa.decimal128(15, 2)),
         ("ceded_premium", pa.decimal128(15, 2)),
         ("reinsurance_recovery", pa.decimal128(15, 2)),
-        ("net_earned_premium", pa.decimal128(15, 2)),
         ("incurred_claim_amount", pa.decimal128(15, 2)),
         ("paid_claim_amount", pa.decimal128(15, 2)),
-        ("outstanding_reserve", pa.decimal128(15, 2)),
-        ("operating_expense", pa.decimal128(15, 2)),
-        ("acquisition_expense", pa.decimal128(15, 2)),
-        ("new_policy_flag", pa.bool_()),
         ("renewal_flag", pa.bool_()),
     ]
 )

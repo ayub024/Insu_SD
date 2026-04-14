@@ -1,0 +1,23 @@
+underwriting_workflow:
+  pricing_decision_type_distribution:
+    Automated: 0.65
+    Manual: 0.35
+  event_sequence:
+    new_business:
+      - Quote Created
+      - Quote Approved
+      - Policy Bound
+      - Policy Issued
+    renewal:
+      - Renewal Quote Created
+      - Renewal Quote Approved
+      - Renewal Policy Bound
+      - Renewal Policy Issued
+  quote_to_bind:
+    quote_revision_probability: 0.25
+    bind_probability: 0.85
+  price_adjustment:
+    quoted_to_indicated_min_pct: 0.90
+    quoted_to_indicated_max_pct: 1.10
+    bind_to_quoted_min_pct: 0.92
+    bind_to_quoted_max_pct: 1.00

@@ -52,7 +52,6 @@ def _is_zero_claim_fact_row(row: dict[str, Any]) -> bool:
     return (
         _safe_float(row.get("incurred_claim_amount")) == 0.0
         and _safe_float(row.get("paid_claim_amount")) == 0.0
-        and _safe_float(row.get("outstanding_reserve")) == 0.0
         and _safe_float(row.get("ibnr_amount")) == 0.0
         and _safe_float(row.get("recoveries_amount")) == 0.0
         and _safe_float(row.get("reinsurance_recovery")) == 0.0
@@ -88,11 +87,11 @@ def log_month_summary(
     loss_ratios: list[float] = []
     combined_ratios: list[float] = []
     for r in fact_rows:
-        earned = _safe_float(r.get("net_earned_premium"))
+        earned = _safe_float(r.get("premium_collected_amount"))
         if earned <= 0.0:
             continue
         incurred = _safe_float(r.get("incurred_claim_amount"))
-        operating = _safe_float(r.get("operating_expense"))
+        operating = _safe_float(r.get("underwriting_expense")) + _safe_float(r.get("other_expense"))
         acquisition = _safe_float(r.get("acquisition_expense"))
         loss_ratios.append(incurred / earned)
         combined_ratios.append((incurred + operating + acquisition) / earned)
@@ -159,9 +158,12 @@ def log_year_summary(
     underwriters_active_end_of_year: int,
 ) -> None:
     """Print a year-end KPI summary using aggregated counters only."""
-    total_earned = _safe_float(year_acc.get("financial_totals", {}).get("net_earned_premium"))
+    total_earned = _safe_float(year_acc.get("financial_totals", {}).get("premium_collected_amount"))
     total_incurred = _safe_float(year_acc.get("financial_totals", {}).get("incurred_claim_amount"))
-    total_operating = _safe_float(year_acc.get("financial_totals", {}).get("operating_expense"))
+    total_operating = (
+        _safe_float(year_acc.get("financial_totals", {}).get("underwriting_expense"))
+        + _safe_float(year_acc.get("financial_totals", {}).get("other_expense"))
+    )
     total_acquisition = _safe_float(year_acc.get("financial_totals", {}).get("acquisition_expense"))
 
     loss_ratio = (total_incurred / total_earned) if total_earned > 0 else None
@@ -213,12 +215,12 @@ def log_year_summary(
     print("")
     print("Financial KPIs (annual totals):")
     print(f"- total_gwp = {_fmt_money(_safe_float(ft.get('gross_written_premium')))}")
-    print(f"- total_earned = {_fmt_money(_safe_float(ft.get('net_earned_premium')))}")
+    print(f"- total_collected_premium = {_fmt_money(_safe_float(ft.get('premium_collected_amount')))}")
     print(f"- total_incurred = {_fmt_money(_safe_float(ft.get('incurred_claim_amount')))}")
     print(f"- total_paid = {_fmt_money(_safe_float(ft.get('paid_claim_amount')))}")
-    print(f"- total_outstanding = {_fmt_money(_safe_float(ft.get('outstanding_reserve')))}")
     print(f"- total_ibnr = {_fmt_money(_safe_float(ft.get('ibnr_amount')))}")
-    print(f"- total_operating_expense = {_fmt_money(_safe_float(ft.get('operating_expense')))}")
+    print(f"- total_underwriting_expense = {_fmt_money(_safe_float(ft.get('underwriting_expense')))}")
+    print(f"- total_other_expense = {_fmt_money(_safe_float(ft.get('other_expense')))}")
     print(f"- total_acquisition_expense = {_fmt_money(_safe_float(ft.get('acquisition_expense')))}")
     print(f"- total_ceded_premium = {_fmt_money(_safe_float(ft.get('ceded_premium')))}")
     print(f"- total_reinsurance_recovery = {_fmt_money(_safe_float(ft.get('reinsurance_recovery')))}")

@@ -1,0 +1,142 @@
+measure_rules:
+  Underwriting:
+    Quote Created:
+      populate:
+        - quoted_price
+        - indicated_premium
+        - expected_loss
+        - underwriting_expense
+    Quote Revised:
+      populate:
+        - quoted_price
+        - indicated_premium
+        - expected_loss
+        - underwriting_expense
+    Quote Approved:
+      populate:
+        - quoted_price
+        - indicated_premium
+        - expected_loss
+        - underwriting_expense
+    Policy Bound:
+      populate:
+        - quoted_price
+        - bind_price
+        - indicated_premium
+        - expected_loss
+        - underwriting_expense
+        - other_expense
+        - acquisition_expense
+        - gross_written_premium
+    Renewal Quote Created:
+      populate:
+        - quoted_price
+        - indicated_premium
+        - expected_loss
+        - underwriting_expense
+    Renewal Policy Bound:
+      populate:
+        - quoted_price
+        - bind_price
+        - indicated_premium
+        - expected_loss
+        - underwriting_expense
+        - other_expense
+        - acquisition_expense
+        - gross_written_premium
+  Billing:
+    Premium Schedule Created:
+      populate: []
+    Premium Invoice Generated:
+      populate: []
+    Monthly Premium Collected:
+      populate:
+        - premium_collected_amount
+    Final Premium Collection:
+      populate:
+        - premium_collected_amount
+  Claims:
+    Claim Reported:
+      requires_claim_key: true
+      populate: []
+    Claim Registered:
+      requires_claim_key: true
+      populate: []
+    Claim Reserve Created:
+      requires_claim_key: true
+      populate:
+        - ibnr_amount
+    Claim Incurred:
+      requires_claim_key: true
+      populate:
+        - incurred_claim_amount
+        - ibnr_amount
+        - other_expense
+    Claim Approved:
+      requires_claim_key: true
+      populate:
+        - other_expense
+    Claim Paid - Partial:
+      requires_claim_key: true
+      populate:
+        - paid_claim_amount
+        - other_expense
+    Claim Paid - Final:
+      requires_claim_key: true
+      populate:
+        - paid_claim_amount
+        - recoveries_amount
+        - other_expense
+    Claim Recovery Received:
+      requires_claim_key: true
+      populate:
+        - recoveries_amount
+        - other_expense
+    Claim Closed:
+      requires_claim_key: true
+      populate: []
+    Claim Reserve Revised:
+      requires_claim_key: true
+      populate:
+        - ibnr_amount
+        - other_expense
+    Claim Reopened:
+      requires_claim_key: true
+      populate:
+        - other_expense
+  Reinsurance:
+    Ceded Premium Booked:
+      populate:
+        - ceded_premium
+    Reinsurance Recovery Estimated:
+      requires_claim_key: true
+      populate:
+        - reinsurance_recovery
+    Reinsurance Recovery Received:
+      requires_claim_key: true
+      populate:
+        - reinsurance_recovery
+  Policy Servicing:
+    Endorsement Requested:
+      populate:
+        - other_expense
+    Endorsement Approved:
+      populate:
+        - underwriting_expense
+        - other_expense
+    Coverage Changed:
+      populate:
+        - quoted_price
+        - bind_price
+        - gross_written_premium
+    Policy Expired:
+      populate: []
+    Policy Lapsed:
+      populate:
+        - other_expense
+    Policy Reinstated:
+      populate:
+        - other_expense
+    Policy Cancelled:
+      populate:
+        - other_expense

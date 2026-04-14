@@ -1,0 +1,44 @@
+transaction_types:
+  Underwriting:
+    - Quote Created
+    - Quote Revised
+    - Quote Approved
+    - Policy Bound
+    - Policy Issued
+    - Renewal Quote Created
+    - Renewal Quote Approved
+    - Renewal Policy Bound
+    - Renewal Policy Issued
+  Billing:
+    - Premium Schedule Created
+    - Premium Invoice Generated
+    - Monthly Premium Collected
+    - Premium Collection Failed
+    - Premium Collection Retried
+    - Premium Adjustment
+    - Premium Refund
+    - Final Premium Collection
+  Claims:
+    - Claim Reported
+    - Claim Registered
+    - Claim Reserve Created
+    - Claim Reserve Revised
+    - Claim Incurred
+    - Claim Approved
+    - Claim Paid - Partial
+    - Claim Paid - Final
+    - Claim Closed
+    - Claim Reopened
+    - Claim Recovery Received
+  Reinsurance:
+    - Ceded Premium Booked
+    - Reinsurance Recovery Estimated
+    - Reinsurance Recovery Received
+  Policy Servicing:
+    - Endorsement Requested
+    - Endorsement Approved
+    - Coverage Changed
+    - Policy Lapsed
+    - Policy Reinstated
+    - Policy Cancelled
+    - Policy Expired

@@ -54,24 +54,46 @@ def generate_dashboards(writer, csv_dir: Path):
     # Fact: Financials over time
     fact_trend = fact_df.groupby("month").agg({
         "gross_written_premium": "sum",
-        "net_earned_premium": "sum",
+        "premium_collected_amount": "sum",
         "incurred_claim_amount": "sum",
-        "operating_expense": "sum",
+        "underwriting_expense": "sum",
+        "other_expense": "sum",
         "acquisition_expense": "sum",
     }).reset_index()
-    fact_trend["Loss_Ratio"] = fact_trend["incurred_claim_amount"] / fact_trend["net_earned_premium"].replace(0, 1)
+    fact_trend["operating_expense"] = fact_trend["underwriting_expense"] + fact_trend["other_expense"]
+    fact_trend["Loss_Ratio"] = fact_trend["incurred_claim_amount"] / fact_trend["premium_collected_amount"].replace(0, 1)
     
     # Fact: Renewals
-    fact_ren = fact_df.groupby("month").agg({
-        "new_policy_flag": "sum",
-        "renewal_flag": "sum"
+    uw_events = fact_df[fact_df["transaction_domain"].eq("Underwriting")].copy()
+    uw_events["renewal_flag_bool"] = uw_events["renewal_flag"].astype(str).str.lower().isin(["true", "1", "yes"])
+    fact_ren = uw_events.groupby("month").agg({
+        "renewal_flag_bool": "sum"
     }).reset_index()
+    fact_ren["new_policy_count"] = (
+        uw_events
+        .assign(new_policy_flag=lambda df: ~df["renewal_flag_bool"])
+        .groupby("month")["new_policy_flag"]
+        .sum()
+        .reindex(fact_ren["month"])
+        .fillna(0)
+        .values
+    )
+    fact_ren = fact_ren.rename(columns={"renewal_flag_bool": "renewal_count"})
+    fact_ren = fact_ren[["month", "new_policy_count", "renewal_count"]]
 
     # Fact: Claim Waterfall (Total)
     wf_data = pd.DataFrame([{
-        "Metric": ["Paid", "Outstanding", "IBNR"],
-        "Amount": [fact_df["paid_claim_amount"].sum(), fact_df["outstanding_reserve"].sum(), fact_df["ibnr_amount"].sum()]
+        "Metric": ["Paid", "Incurred", "IBNR"],
+        "Amount": [fact_df["paid_claim_amount"].sum(), fact_df["incurred_claim_amount"].sum(), fact_df["ibnr_amount"].sum()]
     }]).explode(["Metric", "Amount"]).reset_index(drop=True)
+
+    domain_mix = fact_df.groupby("transaction_domain").size().reset_index(name="event_count")
+    reinsurance_data = pd.DataFrame(
+        [
+            {"Metric": "Ceded Premium", "Amount": fact_df["ceded_premium"].sum()},
+            {"Metric": "Reinsurance Recovery", "Amount": fact_df["reinsurance_recovery"].sum()},
+        ]
+    )
 
     # Merge prod_df into fact_df to get product_name
     fact_df = fact_df.merge(prod_df[["product_key", "product_name"]], on="product_key", how="left")
@@ -111,6 +133,22 @@ def generate_dashboards(writer, csv_dir: Path):
         dash_ws.cell(row=r_idx+i, column=19, value=r[1])
     r_wf_end = dash_ws.max_row
 
+    # Block 5: Domain Mix (U-V)
+    r_idx = dash_ws.max_row + 2
+    r_domain_start = r_idx
+    for i, r in enumerate(dataframe_to_rows(domain_mix, index=False, header=True)):
+        dash_ws.cell(row=r_idx+i, column=21, value=r[0])
+        dash_ws.cell(row=r_idx+i, column=22, value=r[1])
+    r_domain_end = dash_ws.max_row
+
+    # Block 6: Reinsurance Summary (X-Y)
+    r_idx = dash_ws.max_row + 2
+    r_reins_start = r_idx
+    for i, r in enumerate(dataframe_to_rows(reinsurance_data, index=False, header=True)):
+        dash_ws.cell(row=r_idx+i, column=24, value=r[0])
+        dash_ws.cell(row=r_idx+i, column=25, value=r[1])
+    r_reins_end = dash_ws.max_row
+
     # --------- DRAW CHARTS ------------
     if "fact_policy" in wb.sheetnames:
         ws_fact = wb["fact_policy"]
@@ -119,12 +157,12 @@ def generate_dashboards(writer, csv_dir: Path):
         lc = LineChart()
         dates = Reference(dash_ws, min_col=1, min_row=2, max_row=r_fact_end)
         data = Reference(dash_ws, min_col=2, min_row=1, max_col=4, max_row=r_fact_end)
-        add_chart(ws_fact, lc, "Premium & Incurred Claims Growth\n(Tracking GWP, Net Earned, and Claims over time)", "Z2", data, dates, x_title="Month", y_title="Amount ($)")
+        add_chart(ws_fact, lc, "Premium & Incurred Claims Growth\n(Tracking GWP, Collected Premium, and Claims over time)", "Z2", data, dates, x_title="Month", y_title="Amount ($)")
         
         # Loss Ratio Line Chart
         lr = LineChart()
         data_lr = Reference(dash_ws, min_col=7, min_row=1, max_row=r_fact_end)
-        add_chart(ws_fact, lr, "Loss Ratio vs. Time\n(Incurred Claims / Net Earned Premium)", "Z17", data_lr, dates, x_title="Month", y_title="Loss Ratio")
+        add_chart(ws_fact, lr, "Loss Ratio vs. Time\n(Incurred Claims / Collected Premium)", "Z17", data_lr, dates, x_title="Month", y_title="Loss Ratio")
         
         # New vs Renewal Accumulation
         bc = BarChart()
@@ -140,7 +178,18 @@ def generate_dashboards(writer, csv_dir: Path):
         wc.grouping = "stacked"
         wc_cats = Reference(dash_ws, min_col=18, min_row=r_cust_end+3, max_row=r_wf_end)
         wc_data = Reference(dash_ws, min_col=19, min_row=r_cust_end+2, max_row=r_wf_end)
-        add_chart(ws_fact, wc, "Incurred Claim Waterfall\n(Breakdown of Paid, Outstanding, and IBNR)", "Z47", wc_data, wc_cats, x_title="Claim Component", y_title="Amount ($)")
+        add_chart(ws_fact, wc, "Claim Waterfall\n(Breakdown of Paid, Incurred, and IBNR)", "Z47", wc_data, wc_cats, x_title="Claim Component", y_title="Amount ($)")
+
+        dc = PieChart()
+        dc_cats = Reference(dash_ws, min_col=21, min_row=r_domain_start+1, max_row=r_domain_end)
+        dc_data = Reference(dash_ws, min_col=22, min_row=r_domain_start, max_row=r_domain_end)
+        add_chart(ws_fact, dc, "Transaction Domain Mix\n(Event counts by business domain)", "Z62", dc_data, dc_cats)
+
+        rc = BarChart()
+        rc.type = "col"
+        rc_cats = Reference(dash_ws, min_col=24, min_row=r_reins_start+1, max_row=r_reins_end)
+        rc_data = Reference(dash_ws, min_col=25, min_row=r_reins_start, max_row=r_reins_end)
+        add_chart(ws_fact, rc, "Reinsurance Summary\n(Ceded premium and recovery amounts)", "Z77", rc_data, rc_cats, x_title="Metric", y_title="Amount ($)")
         
     if "dim_customer" in wb.sheetnames:
         ws_cust = wb["dim_customer"]

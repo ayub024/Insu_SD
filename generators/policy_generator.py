@@ -255,7 +255,11 @@ def generate_monthly_policies(month: str | date, world_state: Optional[dict[str,
 
         policy_row = create_new_policy(
             start_date=start_dt,
-            product={"product_name": product_name, "line_of_business": lob},
+            product={
+                "product_name": product_name,
+                "line_of_business": lob,
+                "gross_written_premium": gross_written_premium,
+            },
             segment={"segment": segment, "geography": geography},
             customer=customer,
             channel={"channel_type": channel_type},

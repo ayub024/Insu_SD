@@ -1,0 +1,31 @@
+policy_lifecycle_rules:
+  servicing_enabled: true
+  emit_policy_expired_event: true
+  endorsement_probability: 0.08
+  cancellation_probability: 0.00
+  lapse_probability: 0.00
+  reinstatement_probability: 0.00
+  cancellation:
+    month_offset_min: 3
+    month_offset_max: 10
+    transaction_type: Policy Cancelled
+  lapse:
+    month_offset_min: 3
+    month_offset_max: 10
+    transaction_type: Policy Lapsed
+  reinstatement:
+    delay_days_min: 15
+    delay_days_max: 45
+    transaction_type: Policy Reinstated
+  endorsement:
+    request_month_offset_min: 2
+    request_month_offset_max: 8
+    approval_delay_days_min: 3
+    approval_delay_days_max: 14
+    premium_adjustment_min_pct: -0.10
+    premium_adjustment_max_pct: 0.20
+    transaction_types:
+      requested: Endorsement Requested
+      approved: Endorsement Approved
+      coverage_changed: Coverage Changed
+      billing_adjustment: Premium Adjustment

@@ -1,0 +1,20 @@
+expense_rules:
+  new_business:
+    underwriting_expense_pct_of_gwp:
+      min: 0.01
+      max: 0.04
+    acquisition_expense_pct_of_gwp:
+      min: 0.05
+      max: 0.18
+    other_expense_pct_of_gwp:
+      min: 0.005
+      max: 0.03
+  renewal:
+    underwriting_expense_multiplier: 0.60
+    acquisition_expense_multiplier: 0.40
+    other_expense_multiplier: 0.60
+  pricing_decision_type_adjustment:
+    Manual:
+      underwriting_expense_multiplier: 1.25
+    Automated:
+      underwriting_expense_multiplier: 0.75

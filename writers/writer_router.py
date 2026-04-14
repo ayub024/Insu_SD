@@ -12,10 +12,17 @@ DIM_COLUMNS: dict[str, list[str]] = {
     "dim_policy": [
         "policy_key",
         "policy_number",
+        "policy_region",
         "policy_status",
         "policy_start_date",
         "policy_end_date",
+        "policy_lapsed_date",
         "tenure_years",
+        "renewal_cycle_number",
+        "sum_insured",
+        "risk_band",
+        "insured_asset",
+        "insured_asset_details",
     ],
     "dim_product": [
         "product_key",
@@ -67,10 +74,20 @@ DIM_COLUMNS: dict[str, list[str]] = {
         "seniority_level",
         "manager_name",
     ],
+    "dim_claim": [
+        "claim_key",
+        "claim_type",
+        "claim_details",
+        "claim_date",
+        "claim_event_region",
+        "event_severity",
+    ],
 }
 
 FACT_COLUMNS: list[str] = [
-    "id",
+    "transaction_id",
+    "transaction_domain",
+    "transaction_type",
     "policy_key",
     "date_key",
     "product_key",
@@ -79,33 +96,42 @@ FACT_COLUMNS: list[str] = [
     "broker_key",
     "customer_key",
     "channel_key",
+    "claim_key",
+    "pricing_decision_type",
+    "quoted_price",
+    "bind_price",
+    "indicated_premium",
+    "expected_loss",
+    "underwriting_expense",
+    "other_expense",
+    "acquisition_expense",
     "gross_written_premium",
+    "premium_collected_amount",
     "ibnr_amount",
     "recoveries_amount",
     "ceded_premium",
     "reinsurance_recovery",
-    "net_earned_premium",
     "incurred_claim_amount",
     "paid_claim_amount",
-    "outstanding_reserve",
-    "operating_expense",
-    "acquisition_expense",
-    "new_policy_flag",
     "renewal_flag",
 ]
 
 FACT_DECIMAL_COLUMNS: set[str] = {
+    "quoted_price",
+    "bind_price",
+    "indicated_premium",
+    "expected_loss",
+    "underwriting_expense",
+    "other_expense",
+    "acquisition_expense",
     "gross_written_premium",
+    "premium_collected_amount",
     "ibnr_amount",
     "recoveries_amount",
     "ceded_premium",
     "reinsurance_recovery",
-    "net_earned_premium",
     "incurred_claim_amount",
     "paid_claim_amount",
-    "outstanding_reserve",
-    "operating_expense",
-    "acquisition_expense",
 }
 
 
@@ -180,9 +206,9 @@ def csv_format_value(col: str, value: Any) -> str | int:
         return ""
     if col in FACT_DECIMAL_COLUMNS:
         return _format_decimal(value)
-    if col in {"new_policy_flag", "renewal_flag", "active_flag"}:
+    if col in {"renewal_flag", "active_flag"}:
         return _format_bool(value)
-    if col in {"date_key", "month", "year", "tenure_years"}:
+    if col in {"date_key", "month", "year", "tenure_years", "claim_key", "renewal_cycle_number"}:
         try:
             return int(value)
         except (TypeError, ValueError):

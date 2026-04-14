@@ -1,0 +1,56 @@
+claim_event_workflow:
+  event_sequence:
+    standard:
+      - Claim Reported
+      - Claim Registered
+      - Claim Reserve Created
+      - Claim Incurred
+      - Claim Approved
+      - Claim Paid - Partial
+      - Claim Paid - Final
+      - Claim Recovery Received
+      - Claim Closed
+    reserve_revision:
+      - Claim Reserve Revised
+    reopened:
+      - Claim Reopened
+      - Claim Reserve Revised
+      - Claim Paid - Final
+      - Claim Closed
+  timing_offsets_days:
+    Claim Reported:
+      min: 0
+      max: 0
+    Claim Registered:
+      min: 0
+      max: 2
+    Claim Reserve Created:
+      min: 1
+      max: 4
+    Claim Incurred:
+      min: 5
+      max: 7
+    Claim Approved:
+      min: 7
+      max: 30
+    Claim Paid - Partial:
+      min: 15
+      max: 45
+    Claim Paid - Final:
+      min: 45
+      max: 120
+    Claim Recovery Received:
+      min: 75
+      max: 150
+    Claim Closed:
+      min: 90
+      max: 180
+    Claim Reopened:
+      min: 120
+      max: 240
+    Claim Reserve Revised:
+      min: 10
+      max: 60
+  reopened_claim_probability: 0.03
+  recovery_probability: 0.15
+  reserve_revision_probability: 0.20

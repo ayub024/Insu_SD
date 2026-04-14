@@ -58,6 +58,30 @@ class PolicyMaster:
         # 12-month term ending the day before the same day next year.
         return _add_months(start_dt, 12) - timedelta(days=1)
 
+    def _policy_key_for_cycle(self, base_policy_key: str, cycle_number: int) -> str:
+        return f"{base_policy_key}-C{cycle_number}"
+
+    def _risk_band(self, gross_written_premium: float) -> str:
+        if gross_written_premium >= 75000:
+            return "High"
+        if gross_written_premium >= 25000:
+            return "Medium"
+        return "Low"
+
+    def _insured_asset(self, product_name: str, line_of_business: str) -> tuple[str, str]:
+        product_text = f"{product_name} {line_of_business}".lower()
+        if "auto" in product_text or "motor" in product_text:
+            return "Vehicle", product_name
+        if "marine" in product_text:
+            return "Marine Cargo", product_name
+        if "property" in product_text or "building" in product_text or "home" in product_text:
+            return "Property", product_name
+        if "health" in product_text:
+            return "Health", product_name
+        if "liability" in product_text or "umbrella" in product_text:
+            return "Liability", product_name
+        return "Insured Asset", product_name
+
     def create_new_policy(
         self,
         start_date: str | date,
@@ -69,18 +93,31 @@ class PolicyMaster:
         underwriter: Any,
     ) -> dict:
         """Create a new policy row (strict Dim_Policy columns only)."""
-        del product, segment, customer, channel, broker, underwriter
-
         start_dt = _to_date(start_date)
         end_dt = self._term_end_for_start(start_dt)
+        product_name = str(product.get("product_name", "")) if isinstance(product, dict) else ""
+        line_of_business = str(product.get("line_of_business", "")) if isinstance(product, dict) else ""
+        policy_region = str(segment.get("geography", "")) if isinstance(segment, dict) else ""
+        gross_written_premium = float(
+            (product.get("gross_written_premium", 0.0) if isinstance(product, dict) else 0.0) or 0.0
+        )
+        asset, asset_details = self._insured_asset(product_name, line_of_business)
+        base_policy_key = self._ids.next_policy_key()
 
         row = {
-            "policy_key": self._ids.next_policy_key(),
+            "policy_key": self._policy_key_for_cycle(base_policy_key, 0),
             "policy_number": self._new_policy_number(start_dt),
+            "policy_region": policy_region,
             "policy_status": "Active",
             "policy_start_date": start_dt.isoformat(),
             "policy_end_date": end_dt.isoformat(),
+            "policy_lapsed_date": None,
             "tenure_years": 1,
+            "renewal_cycle_number": 0,
+            "sum_insured": round(gross_written_premium * 10.0, 2),
+            "risk_band": self._risk_band(gross_written_premium),
+            "insured_asset": asset,
+            "insured_asset_details": asset_details,
         }
         self._policies[row["policy_key"]] = row
         return row
@@ -92,7 +129,7 @@ class PolicyMaster:
         - new policy_key
         - new policy_start_date and policy_end_date
         - increment tenure_years
-        - suffix policy_number
+        - preserve policy_number
         """
         month_start = _to_month_start(month)
         month_last_day = _month_end(month_start)
@@ -117,6 +154,7 @@ class PolicyMaster:
             # NEW: 80% Retention Rate to simulate realistic customer churn
             if random.random() > 0.80:
                 row["policy_status"] = "Lapsed"
+                row["policy_lapsed_date"] = current_end.isoformat()
                 continue
 
             new_start = current_end + timedelta(days=1)
@@ -124,15 +162,17 @@ class PolicyMaster:
             tenure = int(row.get("tenure_years", 1))
             new_tenure = tenure + 1
 
-            # Format Policy Key: POL0000001-01
             base_key = row["policy_key"].split("-")[0]
-            new_key = f"{base_key}-{new_tenure-1:02d}"
+            renewal_cycle = int(row.get("renewal_cycle_number", 0)) + 1
+            new_key = self._policy_key_for_cycle(base_key, renewal_cycle)
 
             new_row = dict(row)
             new_row["policy_key"] = new_key
             new_row["policy_start_date"] = new_start.isoformat()
             new_row["policy_end_date"] = new_end.isoformat()
+            new_row["policy_lapsed_date"] = None
             new_row["tenure_years"] = new_tenure
+            new_row["renewal_cycle_number"] = renewal_cycle
             new_row["policy_status"] = "Active"
 
             new_policies_to_add[new_row["policy_key"]] = new_row

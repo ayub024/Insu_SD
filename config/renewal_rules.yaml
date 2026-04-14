@@ -1,0 +1,18 @@
+renewal_rules:
+  enabled: true
+  default_retention_probability: 0.80
+  policy_key_pattern:
+    original_suffix: C0
+    renewal_suffix_template: C{cycle_number}
+  policy_number_behavior: preserve_original
+  renewal_cycle_number:
+    original_policy: 0
+    increment_by: 1
+  premium_change:
+    default_yoy_growth_rate: 0.05
+    min_growth_rate: -0.03
+    max_growth_rate: 0.12
+  renewal_cost_multiplier:
+    underwriting_expense: 0.60
+    acquisition_expense: 0.40
+    other_expense: 0.60

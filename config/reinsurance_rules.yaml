@@ -1,0 +1,22 @@
+reinsurance_rules:
+  enabled: true
+  ceded_premium:
+    applicable_lob:
+      - Commercial Property
+      - Commercial Casualty
+      - Personal Property
+      - Personal Casualty
+      - Marine
+      - Property
+    min_pct_of_gwp: 0.05
+    max_pct_of_gwp: 0.25
+    event_type: Ceded Premium Booked
+    event_offset_days: 4
+  reinsurance_recovery:
+    trigger_on_claim_threshold: 50000
+    min_pct_of_incurred: 0.10
+    max_pct_of_incurred: 0.40
+    estimated_event_type: Reinsurance Recovery Estimated
+    received_event_type: Reinsurance Recovery Received
+    estimated_offset_days: 45
+    received_offset_days: 95

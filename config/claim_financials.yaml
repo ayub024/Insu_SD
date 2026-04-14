@@ -1,0 +1,26 @@
+claim_financials:
+  event_expense:
+    reported_min: 50
+    registered_min: 75
+    reserve_min: 100
+    incurred_min: 150
+    approved_min: 100
+    paid_min: 75
+    closed_min: 50
+  paid_pattern:
+    partial_payment_probability: 0.70
+    partial_payment_min_pct: 0.40
+    partial_payment_max_pct: 0.75
+    final_payment_closes_claim: true
+  recoveries:
+    recovery_min_pct_of_incurred: 0.02
+    recovery_max_pct_of_incurred: 0.10
+  severity_bands:
+    Low:
+      max_incurred: 5000
+    Medium:
+      max_incurred: 25000
+    High:
+      max_incurred: 100000
+    Catastrophic:
+      max_incurred: null

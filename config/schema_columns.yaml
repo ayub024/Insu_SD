@@ -1,0 +1,47 @@
+tables:
+  FACT_POLICY_TRANSACTION_EVENT:
+    columns:
+      - transaction_id
+      - transaction_domain
+      - transaction_type
+      - policy_key
+      - date_key
+      - product_key
+      - segment_key
+      - underwriter_key
+      - broker_key
+      - customer_key
+      - channel_key
+      - claim_key
+      - pricing_decision_type
+      - quoted_price
+      - bind_price
+      - indicated_premium
+      - expected_loss
+      - underwriting_expense
+      - other_expense
+      - acquisition_expense
+      - gross_written_premium
+      - premium_collected_amount
+      - ibnr_amount
+      - recoveries_amount
+      - ceded_premium
+      - reinsurance_recovery
+      - incurred_claim_amount
+      - paid_claim_amount
+      - renewal_flag
+  DIM_POLICY:
+    columns:
+      - policy_key
+      - policy_number
+      - policy_region
+      - policy_status
+      - policy_start_date
+      - policy_end_date
+      - policy_lapsed_date
+      - tenure_years
+      - renewal_cycle_number
+      - sum_insured
+      - risk_band
+      - insured_asset
+      - insured_asset_details
