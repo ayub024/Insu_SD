@@ -1,6 +1,8 @@
 """Underwriter master data generation with month-by-month hiring growth."""
 
 from __future__ import annotations
+from functools import lru_cache
+import os
 
 from collections import Counter
 from dataclasses import dataclass
@@ -84,6 +86,7 @@ def _month_iter(start: date, end: date) -> list[date]:
     return months
 
 
+@lru_cache(maxsize=None)
 def _load_yaml(path: str) -> dict:
     try:
         import yaml
@@ -104,7 +107,7 @@ class UnderwriterMaster:
         self,
         growth_curves_path: str = "config/growth_curves.yaml",
         geo_distribution_path: str = "config/geo_distribution.yaml",
-        scenario_path: str = "config/scenario.yaml",
+        scenario_path: str = os.getenv("SCENARIO_PATH", "config/scenario.yaml"),
         seed: int = 20260215,
     ) -> None:
         self._rng = np.random.default_rng(int(seed))
@@ -259,6 +262,16 @@ class UnderwriterMaster:
         alloc = self._rng.multinomial(total_count, self._region_probs)
         return {region: int(alloc[idx]) for idx, region in enumerate(_ALLOWED_REGIONS)}
 
+    def _manager_name_for_team_region(self, team: str, region: str) -> str:
+        # Generate a stable realistic name based on the team and region
+        import hashlib
+        hash_bytes = hashlib.md5((team + region).encode('utf-8')).digest()
+        seed = int.from_bytes(hash_bytes[:4], 'little')
+        local_rng = np.random.default_rng(seed)
+        first = str(local_rng.choice(_FIRST_NAMES))
+        last = str(local_rng.choice(_LAST_NAMES))
+        return f"{first} {last}"
+
     def _make_underwriter_row(self, hire_month: date, region_override: Optional[str] = None) -> dict:
         first = str(self._rng.choice(_FIRST_NAMES))
         last = str(self._rng.choice(_LAST_NAMES))
@@ -266,7 +279,7 @@ class UnderwriterMaster:
         region = str(region_override or self._rng.choice(self._region_values, p=self._region_probs))
         seniority = self._choose_seniority_for_region(region)
 
-        manager_name = f"Mgr {team.split()[0]} {region}"
+        manager_name = self._manager_name_for_team_region(team, region)
         key = self._ids.next_underwriter_key()
 
         row = {
@@ -385,7 +398,7 @@ class UnderwriterMaster:
             "team": team,
             "underwriter_region": region,
             "seniority_level": seniority_level,
-            "manager_name": f"Mgr {team.split()[0]} {region}",
+            "manager_name": self._manager_name_for_team_region(team, region),
         }
         self._rows.append(row)
         self._active_from[key] = month_dt

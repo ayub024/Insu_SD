@@ -1,0 +1,7 @@
+foundation:
+  primary_table: fact_policy
+  primary_join: |
+    JOIN dim_date
+      ON dim_date.date_key = fact_policy.date_key
+  period_table: dim_date
+  last_x_condition: dim_date.date_key < toYYYYMMDD(today())

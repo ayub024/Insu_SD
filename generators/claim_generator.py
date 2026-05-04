@@ -8,6 +8,8 @@ from typing import Any
 
 import numpy as np
 
+from generators.cat_engine import get_cat_event_for_claim
+
 
 def _load_claim_count_dist(path: str = "config/claim_count_dist.yaml") -> dict[str, dict[str, float]]:
     try:
@@ -117,16 +119,14 @@ def generate_claims(
 ) -> list[dict]:
     """Generate claim objects for policies.
 
-    Rules:
-    - Product-specific share of policies produce no claim rows.
-    - Remaining policies sample claim count by product from claim_count_dist.yaml.
-    - 4+ claim bucket expands to {4,5,6} with weighted sampling.
-    - Claim date is uniform random in [policy_start_date, policy_end_date].
+    Lifecycle trait rules:
+    - Early Lapse policies (lapse_type='early') → no claims.
+    - Mid Lapse policies (lapse_type='mid') → claim date constrained to
+      [policy_start_date, payment window end] to reflect active coverage.
 
-    Returned claim object fields (strict):
-    - policy_key
-    - claim_date
-    - claim_index
+    CAT rules:
+    - Claims whose date falls within a CAT event window are tagged with
+      cat_event_id + cat_reason for downstream analytics.
     """
     np_rng = _get_rng(rng=rng, seed=seed)
 
@@ -139,6 +139,29 @@ def generate_claims(
         if product_name not in _CLAIM_DIST:
             raise ValueError(f"No claim-count distribution configured for product '{product_name}'")
 
+        # ------------------------------------------------------------------
+        # Lifecycle trait: skip claims entirely for early-lapse policies.
+        # ------------------------------------------------------------------
+        if str(policy.get("lapse_type") or "") == "early":
+            continue
+
+        # ------------------------------------------------------------------
+        # Lifecycle trait: constrain claim end date for mid-lapse policies.
+        # Claim must occur before the policy lapses (after lapse_after_n payments).
+        # ------------------------------------------------------------------
+        effective_end_dt = end_dt
+        if str(policy.get("lapse_type") or "") == "mid":
+            lapse_after_n = int(policy.get("lapse_after_n") or 0)
+            if lapse_after_n > 0:
+                from calendar import monthrange
+                # Advance by lapse_after_n months from start to get lapse date
+                total_month = start_dt.month - 1 + lapse_after_n
+                lapse_year = start_dt.year + total_month // 12
+                lapse_month = total_month % 12 + 1
+                lapse_day = min(start_dt.day, monthrange(lapse_year, lapse_month)[1])
+                effective_end_dt = date(lapse_year, lapse_month, lapse_day)
+                effective_end_dt = min(effective_end_dt, end_dt)
+
         zero_claim_rate = float(_ZERO_CLAIM_RATE_BY_PRODUCT.get(product_name, 0.30))
         if np_rng.uniform(0.0, 1.0) < zero_claim_rate:
             continue
@@ -146,12 +169,23 @@ def generate_claims(
         claim_count = _claim_count_for_product(product_name, np_rng)
 
         for claim_idx in range(1, claim_count + 1):
-            claims.append(
-                {
-                    "policy_key": policy_key,
-                    "claim_date": _uniform_claim_date(start_dt, end_dt, np_rng).isoformat(),
-                    "claim_index": claim_idx,
-                }
-            )
+            claim_dt = _uniform_claim_date(start_dt, effective_end_dt, np_rng)
+            claim_record: dict[str, Any] = {
+                "policy_key": policy_key,
+                "claim_date": claim_dt.isoformat(),
+                "claim_index": claim_idx,
+            }
+
+            # ------------------------------------------------------------------
+            # CAT tagging: check if this claim falls within a CAT event window.
+            # ------------------------------------------------------------------
+            cat_event = get_cat_event_for_claim(policy, claim_dt)
+            if cat_event:
+                claim_record["cat_event_id"] = str(cat_event["id"])
+                claim_record["cat_reason"] = str(cat_event["name"])
+                claim_record["cat_peril"] = str(cat_event.get("peril", ""))
+                claim_record["cat_severity_multiplier"] = float(cat_event.get("severity_multiplier", 1.0))
+
+            claims.append(claim_record)
 
     return claims

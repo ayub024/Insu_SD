@@ -1,0 +1,16 @@
+# Ignore generated data
+output/
+master_data/
+__pycache__/
+.vscode/
+
+# Ignore large binary/data files
+*.parquet
+*.csv
+*.xlsx
+*.zip
+*.7z
+
+# Ignore scratch files
+scratch/
+temp/

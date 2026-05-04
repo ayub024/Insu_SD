@@ -1,12 +1,15 @@
 """Distribution-level validation for synthetic insurance outputs."""
 
 from __future__ import annotations
+from functools import lru_cache
+import os
 
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Optional
 
 
+@lru_cache(maxsize=None)
 def _load_yaml(path: str) -> dict:
     try:
         import yaml
@@ -230,7 +233,7 @@ def validate_distributions(
         if rows and all(_is_zero_claim_row(r) for r in rows):
             zero_claim_policies += 1
 
-    claim_scenario_cfg = _load_yaml("config/scenario.yaml").get("scenario", {}).get("claims", {}).get("zero_claim_rate_by_product", {})
+    claim_scenario_cfg = _load_yaml(os.getenv("SCENARIO_PATH", "config/scenario.yaml")).get("scenario", {}).get("claims", {}).get("zero_claim_rate_by_product", {})
     expected_zeros = 0.0
     valid_policies = 0
     for key in by_policy_rows.keys():

@@ -1,0 +1,100 @@
+measures:
+
+  # ================= PREMIUM & PRICING =================
+  # PRIMARY: ALIAS columns — safe to SUM without any WHERE filter
+  - text: Gross Written Premium
+    column: [gwp_amount]
+    statement: True
+
+  - text: Net Earned Premium
+    column: [earned_premium_amount]
+    statement: True
+
+  - text: Ceded Premium
+    column: [total_ceded_premium]
+    statement: True
+
+  # Reference-only pricing signals (underwriting events only)
+  - text: Quoted Price
+    column: [quoted_price]
+
+  - text: Bind Price
+    column: [bind_price]
+
+  - text: Indicated Premium
+    column: [indicated_premium]
+
+
+  # ================= CLAIMS & RESERVES =================
+  # PRIMARY: ALIAS columns
+  - text: Incurred Claims
+    column: [total_incurred_claims]
+    statement: True
+
+  - text: Paid Claims
+    column: [total_paid_claims]
+    statement: True
+
+  - text: IBNR Reserve
+    column: [total_ibnr]
+    statement: True
+
+  - text: Claim Recoveries
+    column: [total_recoveries]
+    statement: True
+
+  - text: Reinsurance Recovery
+    column: [total_reinsurance_recovery]
+    statement: True
+
+  # Reference-only
+  - text: Expected Loss
+    column: [expected_loss]
+
+
+  # ================= EXPENSE =================
+  # PRIMARY: ALIAS columns
+  - text: Underwriting Expense
+    column: [total_uw_expense]
+    statement: True
+
+  - text: Acquisition Expense
+    column: [total_acquisition_expense]
+    statement: True
+
+  - text: Other Expense
+    column: [total_other_expense]
+    statement: True
+
+
+measure_pairs:
+
+  # Pricing Drilldown
+  - first_text: Quoted Price
+    first_column: [quoted_price]
+    second_text: Bind Price
+    second_column: [bind_price]
+
+  # Premium Written vs Collected
+  - first_text: Gross Written Premium
+    first_column: [gwp_amount]
+    second_text: Net Earned Premium
+    second_column: [earned_premium_amount]
+
+  # Reinsurance Impact
+  - first_text: Gross Written Premium
+    first_column: [gwp_amount]
+    second_text: Ceded Premium
+    second_column: [total_ceded_premium]
+
+  # Claim Liability vs Loss
+  - first_text: Expected Loss
+    first_column: [expected_loss]
+    second_text: Incurred Claims
+    second_column: [total_incurred_claims]
+
+  # Paid vs Incurred
+  - first_text: Incurred Claims
+    first_column: [total_incurred_claims]
+    second_text: Paid Claims
+    second_column: [total_paid_claims]

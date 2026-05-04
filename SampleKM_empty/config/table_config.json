@@ -1,0 +1,160 @@
+{
+  "fact_policy": {
+    "columns": {
+      "transaction_id": { "type": "String", "required": false },
+      "transaction_domain": { "type": "String", "required": false },
+      "transaction_type": { "type": "String", "required": false },
+      "policy_key": { "type": "String", "required": false },
+      "date_key": { "type": "Int32", "required": false },
+      "product_key": { "type": "String", "required": false },
+      "segment_key": { "type": "String", "required": false },
+      "underwriter_key": { "type": "String", "required": false },
+      "broker_key": { "type": "String", "required": false },
+      "customer_key": { "type": "String", "required": false },
+      "channel_key": { "type": "String", "required": false },
+      "claim_key": { "type": "String", "required": false },
+      "pricing_decision_type": { "type": "String", "required": false },
+      "quoted_price": { "type": "Float64", "required": false },
+      "bind_price": { "type": "Float64", "required": false },
+      "indicated_premium": { "type": "Float64", "required": false },
+      "expected_loss": { "type": "Float64", "required": false },
+      "underwriting_expense": { "type": "Float64", "required": false },
+      "other_expense": { "type": "Float64", "required": false },
+      "acquisition_expense": { "type": "Float64", "required": false },
+      "gross_written_premium": { "type": "Float64", "required": false },
+      "premium_collected_amount": { "type": "Float64", "required": false },
+      "ibnr_amount": { "type": "Float64", "required": false },
+      "recoveries_amount": { "type": "Float64", "required": false },
+      "ceded_premium": { "type": "Float64", "required": false },
+      "reinsurance_recovery": { "type": "Float64", "required": false },
+      "incurred_claim_amount": { "type": "Float64", "required": false },
+      "paid_claim_amount": { "type": "Float64", "required": false },
+      "renewal_flag": { "type": "Bool", "required": false },
+
+      "gwp_amount":                { "type": "Float64 ALIAS if(transaction_type IN ('Policy Bound', 'Renewal Policy Bound', 'Endorsement'), coalesce(gross_written_premium, 0), 0)", "required": false },
+      "earned_premium_amount":     { "type": "Float64 ALIAS if(transaction_type IN ('Monthly Premium Collected', 'Final Premium Collection', 'Endorsement'), coalesce(premium_collected_amount, 0), 0)", "required": false },
+      "total_incurred_claims":     { "type": "Float64 ALIAS if(transaction_type = 'Claim Incurred', coalesce(incurred_claim_amount, 0), 0)", "required": false },
+      "total_paid_claims":         { "type": "Float64 ALIAS if(transaction_type IN ('Claim Paid - Partial', 'Claim Paid - Final'), coalesce(paid_claim_amount, 0), 0)", "required": false },
+      "total_ibnr":                { "type": "Float64 ALIAS if(transaction_type IN ('Claim Reserve Created', 'Claim Incurred', 'CAT IBNR Raised', 'Claim Reserve Revised'), coalesce(ibnr_amount, 0), 0)", "required": false },
+      "total_ceded_premium":       { "type": "Float64 ALIAS if(transaction_type = 'Ceded Premium Booked', coalesce(ceded_premium, 0), 0)", "required": false },
+      "total_reinsurance_recovery":{ "type": "Float64 ALIAS if(transaction_type = 'Reinsurance Recovery Received', coalesce(reinsurance_recovery, 0), 0)", "required": false },
+      "total_recoveries":          { "type": "Float64 ALIAS if(transaction_type = 'Claim Recovery Received', coalesce(recoveries_amount, 0), 0)", "required": false },
+      "total_uw_expense":          { "type": "Float64 ALIAS coalesce(underwriting_expense, 0)", "required": false },
+      "total_acquisition_expense": { "type": "Float64 ALIAS coalesce(acquisition_expense, 0)", "required": false },
+      "total_other_expense":       { "type": "Float64 ALIAS coalesce(other_expense, 0)", "required": false }
+    },
+    "type": "table",
+    "engine": "MergeTree ORDER BY \"date_key\" SETTINGS index_granularity = 8192"
+  },
+  "dim_policy": {
+    "columns": {
+      "policy_key": { "type": "String", "required": false },
+      "policy_number": { "type": "String", "required": false },
+      "policy_region": { "type": "String", "required": false },
+      "policy_status": { "type": "String", "required": false },
+      "policy_start_date": { "type": "Date32", "required": false },
+      "policy_end_date": { "type": "Date32", "required": false },
+      "policy_lapsed_date": { "type": "Date32", "required": false },
+      "tenure_years": { "type": "Int32", "required": false },
+      "renewal_cycle_number": { "type": "Int32", "required": false },
+      "sum_insured": { "type": "Float64", "required": false },
+      "risk_band": { "type": "String", "required": false },
+      "insured_asset": { "type": "String", "required": false },
+      "insured_asset_details": { "type": "String", "required": false },
+      "billing_frequency": { "type": "String", "required": false },
+      "billing_installments": { "type": "Int32", "required": false }
+    },
+    "type": "table",
+    "engine": "MergeTree ORDER BY \"policy_key\" SETTINGS index_granularity = 8192"
+  },
+  "dim_date": {
+    "columns": {
+      "date_key": { "type": "Int32", "required": false },
+      "date": { "type": "Date32", "required": false },
+      "month": { "type": "Int32", "required": false },
+      "quarter": { "type": "String", "required": false },
+      "year": { "type": "Int32", "required": false },
+      "fiscal_year": { "type": "String", "required": false }
+    },
+    "type": "table",
+    "engine": "MergeTree ORDER BY \"date_key\" SETTINGS index_granularity = 8192"
+  },
+  "dim_product": {
+    "columns": {
+      "product_key": { "type": "String", "required": false },
+      "product_name": { "type": "String", "required": false },
+      "line_of_business": { "type": "String", "required": false },
+      "coverage_type": { "type": "String", "required": false }
+    },
+    "type": "table",
+    "engine": "MergeTree ORDER BY \"product_key\" SETTINGS index_granularity = 8192"
+  },
+  "dim_channel": {
+    "columns": {
+      "channel_key": { "type": "String", "required": false },
+      "channel_type": { "type": "String", "required": false },
+      "sub_channel": { "type": "String", "required": false },
+      "active_flag": { "type": "UInt8", "required": false }
+    },
+    "type": "table",
+    "engine": "MergeTree ORDER BY \"channel_key\" SETTINGS index_granularity = 8192"
+  },
+  "dim_segment": {
+    "columns": {
+      "segment_key": { "type": "String", "required": false },
+      "segment": { "type": "String", "required": false },
+      "segment_customer_type": { "type": "String", "required": false },
+      "segment_geography": { "type": "String", "required": false }
+    },
+    "type": "table",
+    "engine": "MergeTree ORDER BY \"segment_key\" SETTINGS index_granularity = 8192"
+  },
+  "dim_broker": {
+    "columns": {
+      "broker_key": { "type": "String", "required": false },
+      "broker_name": { "type": "String", "required": false },
+      "broker_type": { "type": "String", "required": false },
+      "broker_region": { "type": "String", "required": false },
+      "license_number": { "type": "String", "required": false }
+    },
+    "type": "table",
+    "engine": "MergeTree ORDER BY \"broker_key\" SETTINGS index_granularity = 8192"
+  },
+  "dim_customer": {
+    "columns": {
+      "customer_key": { "type": "String", "required": false },
+      "customer_name": { "type": "String", "required": false },
+      "customer_entity_type": { "type": "String", "required": false },
+      "age_group": { "type": "String", "required": false },
+      "gender": { "type": "String", "required": false },
+      "customer_geography": { "type": "String", "required": false },
+      "income_band": { "type": "String", "required": false }
+    },
+    "type": "table",
+    "engine": "MergeTree ORDER BY \"customer_key\" SETTINGS index_granularity = 8192"
+  },
+  "dim_underwriter": {
+    "columns": {
+      "underwriter_key": { "type": "String", "required": false },
+      "underwriter_name": { "type": "String", "required": false },
+      "team": { "type": "String", "required": false },
+      "underwriter_region": { "type": "String", "required": false },
+      "seniority_level": { "type": "String", "required": false },
+      "manager_name": { "type": "String", "required": false }
+    },
+    "type": "table",
+    "engine": "MergeTree ORDER BY \"underwriter_key\" SETTINGS index_granularity = 8192"
+  },
+  "dim_claim": {
+    "columns": {
+      "claim_key": { "type": "String", "required": false },
+      "claim_type": { "type": "String", "required": false },
+      "claim_details": { "type": "String", "required": false },
+      "claim_date": { "type": "Date32", "required": false },
+      "claim_event_region": { "type": "String", "required": false },
+      "event_severity": { "type": "String", "required": false }
+    },
+    "type": "table",
+    "engine": "MergeTree ORDER BY \"claim_key\" SETTINGS index_granularity = 8192"
+  }
+}

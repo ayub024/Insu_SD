@@ -51,6 +51,29 @@ claim_event_workflow:
     Claim Reserve Revised:
       min: 10
       max: 60
-  reopened_claim_probability: 0.03
-  recovery_probability: 0.15
-  reserve_revision_probability: 0.20
+  probabilities:
+    default:
+      reopened_claim_probability: 0.03
+      recovery_probability: 0.15
+      reserve_revision_probability: 0.20
+    by_product:
+      "General Liability":
+        reopened_claim_probability: 0.08
+        recovery_probability: 0.05
+        reserve_revision_probability: 0.60
+      "Commercial Auto Liability":
+        reopened_claim_probability: 0.10
+        recovery_probability: 0.40
+        reserve_revision_probability: 0.50
+      "Umbrella / Excess":
+        reopened_claim_probability: 0.15
+        recovery_probability: 0.05
+        reserve_revision_probability: 0.70
+      "Renters":
+        reopened_claim_probability: 0.01
+        recovery_probability: 0.02
+        reserve_revision_probability: 0.05
+      "Personal Auto":
+        reopened_claim_probability: 0.04
+        recovery_probability: 0.50
+        reserve_revision_probability: 0.15

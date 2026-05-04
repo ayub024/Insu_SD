@@ -1,0 +1,34 @@
+scenario:
+  mode: validation
+  output_dir: "output/validation"
+  random_seed: 20260215
+
+  presets:
+    validation:
+      date_range:
+        start: "2023-01-01"
+        end: "2024-12-31"
+      target_scale:
+        total_policies: 300
+      max_fact_rows_safety_limit: 50000
+
+  # High claim frequency for validation
+  claims:
+    zero_claim_rate_by_product:
+      "Building & Contents": 0.10
+      "Business Interruption": 0.10
+      "Inland Marine": 0.10
+      "General Liability": 0.10
+      "Commercial Auto Liability": 0.10
+      "Umbrella / Excess": 0.10
+      "Homeowners": 0.10
+      "Renters": 0.10
+      "Condo": 0.10
+      "Personal Auto": 0.10
+      "Personal Umbrella": 0.10
+      "Motorcycle / Recreational": 0.10
+
+  policy_rules:
+    policy_term_months: 12
+    cancellations_allowed: true
+    lapses_allowed: true

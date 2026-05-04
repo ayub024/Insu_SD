@@ -1,0 +1,30 @@
+scenario_traits:
+  # Boosted for validation: 50/50 split
+  billing_frequency:
+    monthly: 0.50
+    annual:  0.50
+
+  # Boosted for validation: 60% of policies will have some form of lapse
+  lapse:
+    none:  0.40
+    mid:   0.30
+    early: 0.30
+    lapse_mid_range:
+      min_payments: 1
+      max_payments: 8
+
+  # Boosted for validation: 60% of policies will have endorsements
+  endorsements:
+    none:             0.40
+    single_increase:  0.20
+    single_decrease:  0.20
+    multiple:         0.20
+    multiple_count:
+      weights: [0.50, 0.50]
+
+  # Balanced for validation: ensuring equal coverage of all shapes
+  claim_workflow:
+    standard:   0.25
+    recoveries: 0.25
+    open:       0.25
+    long_tail:  0.25

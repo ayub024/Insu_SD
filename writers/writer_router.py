@@ -23,6 +23,8 @@ DIM_COLUMNS: dict[str, list[str]] = {
         "risk_band",
         "insured_asset",
         "insured_asset_details",
+        "billing_frequency",
+        "billing_installments",
     ],
     "dim_product": [
         "product_key",
@@ -90,6 +92,7 @@ FACT_COLUMNS: list[str] = [
     "transaction_type",
     "policy_key",
     "date_key",
+    "policy_issue_date",
     "product_key",
     "segment_key",
     "underwriter_key",

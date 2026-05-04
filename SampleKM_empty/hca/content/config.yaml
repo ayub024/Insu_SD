@@ -1,0 +1,6 @@
+config:
+  project_name: insurance
+  target_dbms: clickhouse
+  use_labels: True
+  database_key: insurance
+  template_groups: [dimension_compare, dimension_hierarchy, dimension_reference, dimension_year, measure_by_dimension, measure_compare, measure_pivots]

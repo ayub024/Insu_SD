@@ -20,5 +20,7 @@ analysis_output_fixed.json
 
 # VS Code settings
 .vscode/
-
+SampleKM/
+SampleKM_empty/data/
+graphify-out/
 # Ignore local config overrides (if any)

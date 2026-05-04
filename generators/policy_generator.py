@@ -1,6 +1,8 @@
 """Monthly policy generation based on growth targets and assignment rules."""
 
 from __future__ import annotations
+from functools import lru_cache
+import os
 
 from calendar import monthrange
 from datetime import date, timedelta
@@ -14,6 +16,7 @@ from core.growth_engine import (
 )
 from core.random_manager import RandomManager
 from generators.broker_assignment import assign_broker, choose_channel
+from generators.scenario_engine import apply_lifecycle_traits
 from generators.underwriter_assignment import assign_underwriter
 import master_data.broker_master as broker_master
 from master_data.customer_master import create_customer_for_policy
@@ -37,6 +40,7 @@ _PRODUCT_MIX = [
 ]
 
 
+@lru_cache(maxsize=None)
 def _load_yaml(path: str) -> dict:
     try:
         import yaml
@@ -63,7 +67,7 @@ def _rng_manager(world_state: dict[str, Any]) -> RandomManager:
     if manager is not None:
         return manager
 
-    scenario = _load_yaml("config/scenario.yaml").get("scenario", {})
+    scenario = _load_yaml(os.getenv("SCENARIO_PATH", "config/scenario.yaml")).get("scenario", {})
     raw_seed = world_state.get("random_seed")
     if raw_seed is None:
         raw_seed = scenario.get("random_seed", 20260215)
@@ -152,6 +156,11 @@ def generate_monthly_policies(month: str | date, world_state: Optional[dict[str,
     """
     if world_state is None:
         world_state = {}
+
+    traits = _load_yaml("config/scenario_traits.yaml").get("scenario_traits", {})
+    premium_schedules = traits.get("premium_schedules", {})
+    comm_weights = premium_schedules.get("commercial", {}).get("weights", [0.4, 0.2, 0.2, 0.2])
+    pers_weights = premium_schedules.get("personal", {}).get("weights", [0.2, 0.2, 0.2, 0.4])
 
     month_dt = _parse_month(month)
     month_key = month_dt.strftime("%Y-%m")
@@ -251,7 +260,17 @@ def generate_monthly_policies(month: str | date, world_state: Optional[dict[str,
             )
 
         start_dt = _month_random_start_date(rng, month_dt, entity_seed=f"{seed_base}|start")
-        end_dt = start_dt + timedelta(days=365)
+        
+        tenure_months = 12
+        if rng.uniform(0.0, 1.0, entity_seed=f"{seed_base}|tenure_var") < 0.05:
+            if lob.startswith("Personal"):
+                tenure_months = int(rng.choice_weighted([6, 9], [0.5, 0.5], entity_seed=f"{seed_base}|tenure_val"))
+            else:
+                tenure_months = int(rng.choice_weighted([24, 36], [0.5, 0.5], entity_seed=f"{seed_base}|tenure_val"))
+                
+        schedule_choices = ["Annually", "Semi-Annually", "Quarterly", "Monthly"]
+        schedule_weights = comm_weights if not lob.startswith("Personal") else pers_weights
+        premium_schedule = str(rng.choice_weighted(schedule_choices, schedule_weights, entity_seed=f"{seed_base}|sched"))
 
         policy_row = create_new_policy(
             start_date=start_dt,
@@ -265,10 +284,9 @@ def generate_monthly_policies(month: str | date, world_state: Optional[dict[str,
             channel={"channel_type": channel_type},
             broker={"broker_key": broker_key} if broker_key else None,
             underwriter=underwriter,
+            tenure_months=tenure_months,
+            premium_schedule=premium_schedule,
         )
-
-        # Enforce generator rule for end date.
-        policy_row["policy_end_date"] = end_dt.isoformat()
 
         policy_obj = {
             "policy_key": policy_row["policy_key"],
@@ -288,7 +306,11 @@ def generate_monthly_policies(month: str | date, world_state: Optional[dict[str,
             "gross_written_premium": float(policy_ctx["gross_written_premium"]),
             "new_policy_flag": True,
             "renewal_flag": False,
+            "premium_schedule": premium_schedule,
+            "billing_installments": policy_row.get("billing_installments", 1)
         }
+        # Assign lifecycle traits (billing, lapse, endorsements, claim_workflow)
+        apply_lifecycle_traits(policy_obj, rng, world_state)
         policies.append(policy_obj)
 
     return policies

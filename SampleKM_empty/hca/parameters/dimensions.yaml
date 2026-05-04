@@ -1,0 +1,167 @@
+dimensions:
+
+  # ================= EVENT CONTEXT =================
+  - text: Transaction Domain
+    source: fact_policy
+    column: [transaction_domain]
+
+  - text: Transaction Type
+    source: fact_policy
+    column: [transaction_type]
+
+  - text: Pricing Decision Type
+    source: fact_policy
+    column: [pricing_decision_type]
+
+
+  # ================= PRODUCT =================
+  - text: Product Name
+    source: dim_product
+    column: [product_name]
+    join: JOIN dim_product ON dim_product.product_key = fact_policy.product_key
+
+  - text: Line of Business
+    source: dim_product
+    column: [line_of_business]
+    join: JOIN dim_product ON dim_product.product_key = fact_policy.product_key
+
+  - text: Coverage Type
+    source: dim_product
+    column: [coverage_type]
+    join: JOIN dim_product ON dim_product.product_key = fact_policy.product_key
+
+
+  # ================= POLICY ATTRIBUTES =================
+  - text: Policy Number
+    source: dim_policy
+    column: [policy_number]
+    join: JOIN dim_policy ON dim_policy.policy_key = fact_policy.policy_key
+
+  - text: Policy Status
+    source: dim_policy
+    column: [policy_status]
+    join: JOIN dim_policy ON dim_policy.policy_key = fact_policy.policy_key
+
+  - text: Risk Band
+    source: dim_policy
+    column: [risk_band]
+    join: JOIN dim_policy ON dim_policy.policy_key = fact_policy.policy_key
+
+  - text: Billing Frequency
+    source: dim_policy
+    column: [billing_frequency]
+    join: JOIN dim_policy ON dim_policy.policy_key = fact_policy.policy_key
+
+  - text: Insured Asset
+    source: dim_policy
+    column: [insured_asset]
+    join: JOIN dim_policy ON dim_policy.policy_key = fact_policy.policy_key
+
+
+  # ================= BROKER =================
+  - text: Broker Name
+    source: dim_broker
+    column: [broker_name]
+    join: JOIN dim_broker ON dim_broker.broker_key = fact_policy.broker_key
+
+  - text: Broker Region
+    source: dim_broker
+    column: [broker_region]
+    join: JOIN dim_broker ON dim_broker.broker_key = fact_policy.broker_key
+
+
+  # ================= UNDERWRITER =================
+  - text: Underwriter Name
+    source: dim_underwriter
+    column: [underwriter_name]
+    join: JOIN dim_underwriter ON dim_underwriter.underwriter_key = fact_policy.underwriter_key
+
+  - text: Underwriting Team
+    source: dim_underwriter
+    column: [team]
+    join: JOIN dim_underwriter ON dim_underwriter.underwriter_key = fact_policy.underwriter_key
+
+
+  # ================= SEGMENT & CUSTOMER =================
+  - text: Segment
+    source: dim_segment
+    column: [segment]
+    join: JOIN dim_segment ON dim_segment.segment_key = fact_policy.segment_key
+
+  - text: Customer Name
+    source: dim_customer
+    column: [customer_name]
+    join: JOIN dim_customer ON dim_customer.customer_key = fact_policy.customer_key
+
+
+# ================= SAMPLE VALUES & DRILLDOWNS =================
+dimension_samples:
+
+  - text: Transaction Domain
+    name: transaction_domain
+    column: [transaction_domain]
+    value: Underwriting
+    next_text: Transaction Type
+    next_name: transaction_type
+    next_column: [transaction_type]
+
+  - text: Coverage Type
+    name: coverage_type
+    column: [coverage_type]
+    value: Commercial
+    next_text: Line of Business
+    next_name: line_of_business
+    next_column: [line_of_business]
+    join: JOIN dim_product ON dim_product.product_key = fact_policy.product_key
+
+  - text: Underwriting Team
+    name: team
+    column: [team]
+    value: Commercial Property UW
+    next_text: Underwriter Name
+    next_name: underwriter_name
+    next_column: [underwriter_name]
+    join: JOIN dim_underwriter ON dim_underwriter.underwriter_key = fact_policy.underwriter_key
+
+
+# ================= VALUE PAIRS =================
+dimension_pairs:
+
+  - text: Transaction Domain
+    name: transaction_domain
+    first_value: Underwriting
+    second_value: Billing
+
+  - text: Transaction Type
+    name: transaction_type
+    first_value: Policy Bound
+    second_value: Policy Lapsed
+
+  - text: Pricing Decision Type
+    name: pricing_decision_type
+    first_value: Automated
+    second_value: Manual
+
+
+# ================= HIERARCHY =================
+dimension_hierarchy:
+
+  # --- Event Drilldown ---
+  - l1_text: Transaction Domain
+    l1_name: transaction_domain
+    l2_text: Transaction Type
+    l2_name: transaction_type
+
+  # --- Product Drilldown ---
+  - l1_text: Coverage Type
+    l1_name: coverage_type
+    l2_text: Line of Business
+    l2_name: line_of_business
+    join: JOIN dim_product ON dim_product.product_key = fact_policy.product_key
+
+  # --- Underwriting Drilldown ---
+  - l1_text: Underwriting Team
+    l1_name: team
+    l2_text: Underwriter Name
+    l2_name: underwriter_name
+    join: JOIN dim_underwriter ON dim_underwriter.underwriter_key = fact_policy.underwriter_key

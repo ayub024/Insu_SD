@@ -6,12 +6,7 @@ measure_rules:
         - indicated_premium
         - expected_loss
         - underwriting_expense
-    Quote Revised:
-      populate:
-        - quoted_price
-        - indicated_premium
-        - expected_loss
-        - underwriting_expense
+
     Quote Approved:
       populate:
         - quoted_price
@@ -45,10 +40,7 @@ measure_rules:
         - acquisition_expense
         - gross_written_premium
   Billing:
-    Premium Schedule Created:
-      populate: []
-    Premium Invoice Generated:
-      populate: []
+
     Monthly Premium Collected:
       populate:
         - premium_collected_amount
@@ -95,6 +87,10 @@ measure_rules:
     Claim Closed:
       requires_claim_key: true
       populate: []
+    CAT IBNR Raised:
+      requires_claim_key: false
+      populate:
+        - ibnr_amount
     Claim Reserve Revised:
       requires_claim_key: true
       populate:

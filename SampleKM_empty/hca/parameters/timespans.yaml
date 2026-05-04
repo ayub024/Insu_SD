@@ -1,0 +1,69 @@
+years:
+  column: year
+  year_1: "2022"
+  year_2: "2023"
+  year_3: "2024"
+  year_4: "2025"
+
+
+timespans:
+
+  - text: Year 2025
+    condition: "dim_date.year = 2025"
+
+  - text: Year 2024
+    condition: "dim_date.year = 2024"
+
+  - text: Fiscal Year FY25
+    condition: "dim_date.fiscal_year = 'FY25'"
+
+
+timespan_pairs:
+
+  - text: Year 2025 compared to 2024
+    first_condition: "dim_date.year = 2025"
+    first_column: "2025"
+    second_condition: "dim_date.year = 2024"
+    second_column: "2024"
+
+
+time_periods:
+
+  - text: year-on-year
+    column: [year]
+    condition_text: "from 2024 to 2025"
+    condition: "dim_date.year >= 2024 AND dim_date.year <= 2025"
+
+  - text: quarter-on-quarter
+    column: [quarter]
+    condition_text: "for Year 2025"
+    condition: "dim_date.year = 2025"
+
+
+timespan_filters:
+
+  - text: for Year 2025
+    column: [year]
+    condition: "dim_date.year = 2025"
+
+
+timespan_last_x:
+
+  - text: Years
+    column: [year]
+    filter_column: year
+    last_x: 4
+
+  - text: Months
+    column: [month]
+    filter_column: month
+    last_x: 12
+
+
+timespan_pivots:
+
+  - text: Years
+    pivot_column: year
+    pivot_values: ['2022', '2023', '2024', '2025']
+    pivot_labels: ['2022', '2023', '2024', '2025']
+    condition: "dim_date.year BETWEEN 2022 AND 2025"

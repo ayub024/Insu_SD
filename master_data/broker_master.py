@@ -1,6 +1,8 @@
 """Broker master data generation with month-by-month onboarding growth."""
 
 from __future__ import annotations
+from functools import lru_cache
+import os
 
 from dataclasses import dataclass
 from datetime import date
@@ -70,6 +72,7 @@ def _month_iter(start: date, end: date) -> list[date]:
     return months
 
 
+@lru_cache(maxsize=None)
 def _load_yaml(path: str) -> dict:
     try:
         import yaml
@@ -108,7 +111,7 @@ class BrokerMaster:
         self.start_count = int(brokers_cfg.get("start_count", 140))
         self.end_count = int(brokers_cfg.get("end_count", 620))
 
-        scenario_payload = _load_yaml("config/scenario.yaml").get("scenario", {})
+        scenario_payload = _load_yaml(os.getenv("SCENARIO_PATH", "config/scenario.yaml")).get("scenario", {})
         
         mode = str(scenario_payload.get("mode", "")).strip().lower()
         if mode not in {"dev", "prod"}:

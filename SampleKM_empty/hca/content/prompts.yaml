@@ -1,0 +1,142 @@
+guidelines: |-
+  - fact_policy is an event-level fact table. Each row represents a single transaction event
+    (Underwriting, Billing, Claims, Reinsurance, or Policy Servicing).
+  - transaction_domain categorizes events into functional areas.
+  - transaction_type provides the specific event identity (e.g., 'Policy Bound', 'Claim Incurred',
+    'Monthly Premium Collected').
+  - date_key represents the event date. Always join to dim_date for time analysis.
+
+  - The grain is one row per event. A single policy_key will have many rows representing its lifecycle.
+
+  - ALL financial metrics (GWP, claims, expenses, premiums, reserves, reinsurance) are pre-calculated
+    in the database via ALIAS columns. Query them directly without adding manual transaction_type
+    filters or COALESCE wrappers — the database handles NULL-safety and row-context selection internally.
+
+  - Gross Written Premium = SUM(gwp_amount)
+  - Net Earned Premium     = SUM(earned_premium_amount)
+  - Incurred Claims        = SUM(total_incurred_claims)
+  - Paid Claims            = SUM(total_paid_claims)
+  - IBNR Reserve           = SUM(total_ibnr)
+  - Ceded Premium          = SUM(total_ceded_premium)
+  - Reinsurance Recovery   = SUM(total_reinsurance_recovery)
+  - Claim Recoveries       = SUM(total_recoveries)
+  - Underwriting Expense   = SUM(total_uw_expense)
+  - Acquisition Expense    = SUM(total_acquisition_expense)
+  - Other Expense          = SUM(total_other_expense)
+
+  - Loss Ratio     = SUM(total_incurred_claims) / NULLIF(SUM(earned_premium_amount), 0)
+  - Expense Ratio  = SUM(total_uw_expense + total_acquisition_expense + total_other_expense)
+                     / NULLIF(SUM(earned_premium_amount), 0)
+  - Combined Ratio = (SUM(total_incurred_claims) + SUM(total_uw_expense + total_acquisition_expense + total_other_expense))
+                     / NULLIF(SUM(earned_premium_amount), 0)
+
+  - Active Policy Count = COUNT(DISTINCT policy_key) WHERE transaction_type = 'Policy Bound'
+    or policy_status = 'Active' (joined via dim_policy).
+  - Renewal Rate = COUNT(DISTINCT policy_key WHERE transaction_type = 'Renewal Policy Bound')
+    / NULLIF(COUNT(DISTINCT policy_key WHERE transaction_type = 'Policy Expired'), 0).
+
+  - Underwriting events (Quote Created -> Quote Approved -> Policy Bound) track the sales funnel.
+  - Billing events (Monthly Premium Collected, Final Premium Collection) track cash collection.
+  - Claim events (Reported -> Registered -> Reserve Created -> Incurred -> Approved -> Paid -> Closed)
+    track the full loss lifecycle.
+  - Pricing Decision Type: Automated vs Manual helps analyze underwriting efficiency.
+
+  - Join fact_policy to dim_policy on policy_key for risk/asset attributes.
+  - Join fact_policy to dim_date on date_key for time-series analysis.
+  - Join fact_policy to other dimensions (Product, Segment, Broker, Customer, Channel, Underwriter)
+    using their respective keys.
+  - Always use COUNT(DISTINCT policy_key) to count unique policies.
+
+data_model: |-
+  Table: fact_policy
+  Description: Event-level fact table for insurance transactions.
+  Physical Columns (raw source):
+    - transaction_id (STRING)
+    - transaction_domain (STRING): Underwriting | Billing | Claims | Reinsurance | Policy Servicing
+    - transaction_type (STRING): See dimension_values for full list.
+    - policy_key (STRING): FK to dim_policy.
+    - date_key (INT): FK to dim_date (YYYYMMDD).
+    - product_key (STRING): FK to dim_product.
+    - segment_key (STRING): FK to dim_segment.
+    - underwriter_key (STRING): FK to dim_underwriter.
+    - broker_key (STRING): FK to dim_broker.
+    - customer_key (STRING): FK to dim_customer.
+    - channel_key (STRING): FK to dim_channel.
+    - claim_key (STRING): FK to dim_claim (populated on claim events only).
+    - pricing_decision_type (STRING): Automated | Manual.
+    - quoted_price, bind_price, indicated_premium, expected_loss (DECIMAL)
+    - gross_written_premium, premium_collected_amount (DECIMAL, sparse — use ALIAS columns)
+    - ibnr_amount, recoveries_amount, ceded_premium, reinsurance_recovery (DECIMAL, sparse)
+    - incurred_claim_amount, paid_claim_amount (DECIMAL, sparse)
+    - underwriting_expense, acquisition_expense, other_expense (DECIMAL)
+    - renewal_flag (BOOLEAN)
+
+  ALIAS Columns — PREFERRED for all metric queries:
+    - gwp_amount                (GWP for Bound/Renewal/Endorsement events only, else 0)
+    - earned_premium_amount     (Premium for Collection events only, else 0)
+    - total_incurred_claims     (Claim Incurred events only, else 0)
+    - total_paid_claims         (Claim Paid Partial/Final events only, else 0)
+    - total_ibnr                (Reserve events only, else 0)
+    - total_ceded_premium       (Ceded Premium Booked events only, else 0)
+    - total_reinsurance_recovery(Reinsurance Recovery Received events only, else 0)
+    - total_recoveries          (Claim Recovery Received events only, else 0)
+    - total_uw_expense          (COALESCE of underwriting_expense, always safe)
+    - total_acquisition_expense (COALESCE of acquisition_expense, always safe)
+    - total_other_expense       (COALESCE of other_expense, always safe)
+
+  Table: dim_policy
+  Description: Policy dimension — risk profile, lifecycle, and billing attributes.
+  Columns:
+    - policy_key (STRING): Primary Key.
+    - policy_number (STRING): Master policy number across terms.
+    - policy_region (STRING): Geography of the policy.
+    - policy_status (STRING): Active | Lapsed | Expired.
+    - policy_start_date, policy_end_date, policy_lapsed_date (DATE)
+    - tenure_years (INT), renewal_cycle_number (INT)
+    - sum_insured (DECIMAL), risk_band (STRING)
+    - insured_asset (STRING), insured_asset_details (STRING)
+    - billing_frequency (STRING): Annually | Quarterly | Monthly.
+    - billing_installments (INT)
+
+dimension_values: |-
+  Transaction Domain:
+    - Underwriting
+    - Billing
+    - Claims
+    - Reinsurance
+    - Policy Servicing
+  Transaction Type:
+    - Quote Created
+    - Quote Approved
+    - Policy Bound
+    - Renewal Quote Created
+    - Renewal Quote Approved
+    - Renewal Policy Bound
+    - Monthly Premium Collected
+    - Final Premium Collection
+    - Endorsement
+    - Claim Reported
+    - Claim Registered
+    - Claim Reserve Created
+    - Claim Reserve Revised
+    - Claim Incurred
+    - Claim Approved
+    - Claim Paid - Partial
+    - Claim Paid - Final
+    - Claim Closed
+    - Claim Reopened
+    - Claim Recovery Received
+    - CAT IBNR Raised
+    - Ceded Premium Booked
+    - Reinsurance Recovery Estimated
+    - Reinsurance Recovery Received
+    - Policy Expired
+    - Policy Lapsed
+  Pricing Decision Type:
+    - Automated
+    - Manual
+  Risk Band:
+    - Low
+    - Medium
+    - High
+    - Catastrophic

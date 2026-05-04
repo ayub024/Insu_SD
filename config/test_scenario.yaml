@@ -1,0 +1,73 @@
+scenario:
+  mode: test
+  test_mode: true
+  prod_mode: false
+  random_seed: 20260215
+
+  presets:
+    test:
+      date_range:
+        start: "2023-01-01"
+        end: "2023-01-31" # Single month for fast validation
+      target_scale:
+        total_policies: 50 # Small enough for instant Excel view
+        min_policy_to_underwriter_ratio: 10 
+        min_policy_to_broker_ratio: 5
+      max_fact_rows_safety_limit: 5000 
+      
+  # Active configuration for the test
+  date_range:
+    start: "2023-01-01"
+    end: "2023-01-31"
+
+  target_scale:
+    total_policies: 50
+    min_policy_to_underwriter_ratio: 10
+    min_policy_to_broker_ratio: 5
+
+  max_fact_rows_safety_limit: 5000
+
+  output:
+    output_formats: ["csv"] # CSV is usually faster for quick visual validation
+    parquet_partition_fact_policy: false
+
+  company:
+    name: "CinSure Test Env"
+    employees_total: 5624
+    underwriting_staff_pct_range: [0.28, 0.32]
+
+  geography:
+    regions:
+      Midwest: 0.40
+      Southeast: 0.25
+      Northeast: 0.15
+      Southwest: 0.10
+      West: 0.10
+
+  channels:
+    distribution:
+      Direct: 0.52
+      Broker: 0.33
+      Bancassurance: 0.15
+
+  claims:
+    # Lowered the zero_claim_rate slightly to ensure we generate enough claims 
+    # to evaluate complex claim/reinsurance transactions for validation
+    zero_claim_rate_by_product:
+      "Building & Contents": 0.30
+      "Business Interruption": 0.50
+      "Inland Marine": 0.40
+      "General Liability": 0.45
+      "Commercial Auto Liability": 0.35
+      "Umbrella / Excess": 0.60
+      "Homeowners": 0.50
+      "Renters": 0.60
+      "Condo": 0.60
+      "Personal Auto": 0.40
+      "Personal Umbrella": 0.70
+      "Motorcycle / Recreational": 0.45
+
+  policy_rules:
+    policy_term_months: 12
+    cancellations_allowed: true # Enabled to test the cancellation flow if you add it
+    lapses_allowed: true        # Enabled to test lapse flow

@@ -38,13 +38,15 @@ def _parse_int(value: Any) -> int | None:
         return None
 
 
-def _parse_decimal(value: Any) -> Decimal:
+def _parse_decimal(value: Any) -> Decimal | None:
     if value in ("", None):
-        return Decimal("0.00")
+        return None
     try:
+        if float(value) == 0.0:
+            return None
         return Decimal(str(value)).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
     except Exception:
-        return Decimal("0.00")
+        return None
 
 
 def _parse_date(value: Any):
@@ -74,6 +76,8 @@ _DIM_SCHEMAS: dict[str, pa.Schema] = {
             ("risk_band", pa.string()),
             ("insured_asset", pa.string()),
             ("insured_asset_details", pa.string()),
+            ("billing_frequency", pa.string()),
+            ("billing_installments", pa.int32()),
         ]
     ),
     "dim_product": pa.schema(
@@ -159,6 +163,7 @@ _FACT_SCHEMA = pa.schema(
         ("transaction_type", pa.string()),
         ("policy_key", pa.string()),
         ("date_key", pa.int32()),
+        ("policy_issue_date", pa.string()),
         ("product_key", pa.string()),
         ("segment_key", pa.string()),
         ("underwriter_key", pa.string()),

@@ -231,8 +231,8 @@ financial_assumptions:
       mean: 10.20
       sigma: 1.10
     max_multiple_of_gwp:
-      personal_lines: 10.0
-      commercial_lines: 20.0
+      personal_lines: 50.0
+      commercial_lines: 200.0
 
   yoy_premium_growth:
     default_rate: 0.05

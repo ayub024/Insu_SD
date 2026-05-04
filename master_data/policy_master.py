@@ -54,9 +54,8 @@ class PolicyMaster:
         self._policy_number_counter += 1
         return f"PN-{start_date.year}-{serial:07d}"
 
-    def _term_end_for_start(self, start_dt: date) -> date:
-        # 12-month term ending the day before the same day next year.
-        return _add_months(start_dt, 12) - timedelta(days=1)
+    def _term_end_for_start(self, start_dt: date, tenure_months: int = 12) -> date:
+        return _add_months(start_dt, tenure_months) - timedelta(days=1)
 
     def _policy_key_for_cycle(self, base_policy_key: str, cycle_number: int) -> str:
         return f"{base_policy_key}-C{cycle_number}"
@@ -91,10 +90,12 @@ class PolicyMaster:
         channel: Any,
         broker: Any,
         underwriter: Any,
+        tenure_months: int = 12,
+        premium_schedule: str = "Annually",
     ) -> dict:
         """Create a new policy row (strict Dim_Policy columns only)."""
         start_dt = _to_date(start_date)
-        end_dt = self._term_end_for_start(start_dt)
+        end_dt = self._term_end_for_start(start_dt, tenure_months)
         product_name = str(product.get("product_name", "")) if isinstance(product, dict) else ""
         line_of_business = str(product.get("line_of_business", "")) if isinstance(product, dict) else ""
         policy_region = str(segment.get("geography", "")) if isinstance(segment, dict) else ""
@@ -104,6 +105,17 @@ class PolicyMaster:
         asset, asset_details = self._insured_asset(product_name, line_of_business)
         base_policy_key = self._ids.next_policy_key()
 
+        if premium_schedule == "Monthly":
+            base_installments = 12
+        elif premium_schedule == "Quarterly":
+            base_installments = 4
+        elif premium_schedule == "Semi-Annually":
+            base_installments = 2
+        else:
+            base_installments = 1
+            
+        billing_installments = max(1, int(base_installments * (tenure_months / 12.0)))
+
         row = {
             "policy_key": self._policy_key_for_cycle(base_policy_key, 0),
             "policy_number": self._new_policy_number(start_dt),
@@ -112,12 +124,14 @@ class PolicyMaster:
             "policy_start_date": start_dt.isoformat(),
             "policy_end_date": end_dt.isoformat(),
             "policy_lapsed_date": None,
-            "tenure_years": 1,
+            "tenure_years": round(tenure_months / 12.0, 2),
             "renewal_cycle_number": 0,
             "sum_insured": round(gross_written_premium * 10.0, 2),
             "risk_band": self._risk_band(gross_written_premium),
             "insured_asset": asset,
             "insured_asset_details": asset_details,
+            "billing_frequency": premium_schedule,
+            "billing_installments": billing_installments,
         }
         self._policies[row["policy_key"]] = row
         return row
@@ -157,10 +171,11 @@ class PolicyMaster:
                 row["policy_lapsed_date"] = current_end.isoformat()
                 continue
 
+            tenure_years = float(row.get("tenure_years", 1.0))
+            tenure_months = int(round(tenure_years * 12))
             new_start = current_end + timedelta(days=1)
-            new_end = _add_months(new_start, 12) - timedelta(days=1)
-            tenure = int(row.get("tenure_years", 1))
-            new_tenure = tenure + 1
+            new_end = self._term_end_for_start(new_start, tenure_months)
+            new_tenure = tenure_years + 1.0
 
             base_key = row["policy_key"].split("-")[0]
             renewal_cycle = int(row.get("renewal_cycle_number", 0)) + 1
@@ -217,6 +232,8 @@ def create_new_policy(
     channel: Any,
     broker: Any,
     underwriter: Any,
+    tenure_months: int = 12,
+    premium_schedule: str = "Annually",
 ) -> dict:
     return _instance().create_new_policy(
         start_date=start_date,
@@ -226,6 +243,8 @@ def create_new_policy(
         channel=channel,
         broker=broker,
         underwriter=underwriter,
+        tenure_months=tenure_months,
+        premium_schedule=premium_schedule,
     )
 
 

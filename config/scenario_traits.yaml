@@ -1,0 +1,83 @@
+# ------------------------------------------------------------------
+# Scenario Trait Probabilities
+# Weights used by scenario_engine.assign_lifecycle_traits().
+# Values are probabilities (0.0–1.0) or relative weights.
+# ------------------------------------------------------------------
+
+scenario_traits:
+
+  # ----------------------------------------------------------------
+  # Trait 1 – Premium Schedules
+  # Weights used for assigning policy billing frequency.
+  # ----------------------------------------------------------------
+  premium_schedules:
+    commercial:
+      weights: [0.4, 0.2, 0.2, 0.2]
+    personal:
+      weights: [0.2, 0.2, 0.2, 0.4]
+
+  # ----------------------------------------------------------------
+  # Trait 2 – Lapse Outcome
+  # ----------------------------------------------------------------
+  lapse:
+    none:  0.87    # policy runs full term
+    mid:   0.08    # N payments then lapsed  (N drawn from lapse_mid_range)
+    early: 0.05    # bound but 0 payments collected
+    lapse_mid_range:
+      min_payments: 1
+      max_payments: 8
+
+  # ----------------------------------------------------------------
+  # Trait 3 – Endorsements
+  # A single policy can have 0, 1, or 2-3 endorsements.
+  # ----------------------------------------------------------------
+  endorsements:
+    none:             0.72
+    single_increase:  0.12   # premium/coverage raised
+    single_decrease:  0.08   # premium/coverage reduced
+    multiple:         0.08   # 2-3 endorsements (mix of increase/decrease)
+    multiple_count:
+      weights: [0.70, 0.30]  # [2 endorsements, 3 endorsements]
+
+  # ----------------------------------------------------------------
+  # Trait 4 – Claim Workflow
+  # Applied ONLY to policies that pass the per-product zero-claim gate.
+  # ----------------------------------------------------------------
+  claim_workflow:
+    default:
+      standard:   0.55
+      recoveries: 0.22
+      open:       0.13
+      long_tail:  0.10
+    by_product:
+      "General Liability":
+        standard:   0.20
+        recoveries: 0.10
+        open:       0.30
+        long_tail:  0.40
+      "Commercial Auto Liability":
+        standard:   0.30
+        recoveries: 0.30
+        open:       0.10
+        long_tail:  0.30
+      "Umbrella / Excess":
+        standard:   0.05
+        recoveries: 0.05
+        open:       0.40
+        long_tail:  0.50
+      "Renters":
+        standard:   0.95
+        recoveries: 0.02
+        open:       0.02
+        long_tail:  0.01
+      "Personal Auto":
+        standard:   0.45
+        recoveries: 0.45
+        open:       0.05
+        long_tail:  0.05
+
+  # ----------------------------------------------------------------
+  # Trait 5 – Policy Vintage (set separately by generator, not here)
+  # new_business: 0.70   # handled by existing renewal_flag logic
+  # renewal:      0.30
+  # ----------------------------------------------------------------

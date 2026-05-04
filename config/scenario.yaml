@@ -7,33 +7,33 @@ scenario:
   presets:
     dev:
       date_range:
-        start: "2022-01-01"
-        end: "2023-03-31"
+        start: "2022-04-01"
+        end: "2026-03-31"
       target_scale:
-        total_policies: 15000
+        total_policies: 5000
         min_policy_to_underwriter_ratio: 250
         min_policy_to_broker_ratio: 120
       max_fact_rows_safety_limit: 120000
     prod:
       date_range:
-        start: "2022-01-01"
-        end: "2025-12-31"
+        start: "2022-04-01"
+        end: "2026-03-31"
       target_scale:
-        total_policies: 200000
+        total_policies: 30000
         min_policy_to_underwriter_ratio: 250
         min_policy_to_broker_ratio: 120
-      max_fact_rows_safety_limit: 1000000
+      max_fact_rows_safety_limit: 10000000
 
   date_range:
-    start: "2022-01-01"
-    end: "2025-12-31"
+    start: "2022-04-01"
+    end: "2026-03-31"
 
   target_scale:
-    total_policies: 200000
+    total_policies: 50000
     min_policy_to_underwriter_ratio: 250
     min_policy_to_broker_ratio: 120
 
-  max_fact_rows_safety_limit: 1000000
+  max_fact_rows_safety_limit: 10000000
 
   output:
     output_formats: ["parquet", "csv"]
@@ -44,7 +44,7 @@ scenario:
 
   company:
     name: "CinSure Ltd."
-    employees_total: 5624
+    employees_total: 800
     underwriting_staff_pct_range: [0.28, 0.32]
 
   geography:
@@ -68,11 +68,11 @@ scenario:
       "Inland Marine": 0.65
       "General Liability": 0.70
       "Commercial Auto Liability": 0.55
-      "Umbrella / Excess": 0.85
+      "Umbrella / Excess": 0.95
       "Homeowners": 0.75
       "Renters": 0.85
       "Condo": 0.80
-      "Personal Auto": 0.55
+      "Personal Auto": 0.70
       "Personal Umbrella": 0.90
       "Motorcycle / Recreational": 0.65
 

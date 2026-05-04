@@ -1,0 +1,160 @@
+[
+  {
+    "name": "Fact_Policy",
+    "description": "Event-level fact table containing individual insurance transaction records for Underwriting, Billing, Claims, Reinsurance, and Policy Servicing.",
+    "columns": [
+      { "name": "transaction_id", "aliases": ["Transaction ID", "Event ID"] },
+      { "name": "transaction_domain", "aliases": ["Transaction Domain", "Functional Area"] },
+      { "name": "transaction_type", "aliases": ["Transaction Type", "Event Name"] },
+      { "name": "policy_key", "aliases": ["Policy Key", "Policy ID"] },
+      { "name": "date_key", "aliases": ["Date Key", "Event Date Factor"] },
+      { "name": "product_key", "aliases": ["Product Key"] },
+      { "name": "segment_key", "aliases": ["Segment Key"] },
+      { "name": "underwriter_key", "aliases": ["Underwriter Key"] },
+      { "name": "broker_key", "aliases": ["Broker Key"] },
+      { "name": "customer_key", "aliases": ["Customer Key"] },
+      { "name": "channel_key", "aliases": ["Channel Key"] },
+      { "name": "claim_key", "aliases": ["Claim Key"] },
+      { "name": "pricing_decision_type", "aliases": ["Pricing Decision Type"] },
+      { "name": "quoted_price", "aliases": ["Quoted Price"] },
+      { "name": "bind_price", "aliases": ["Bind Price"] },
+      { "name": "indicated_premium", "aliases": ["Indicated Premium"] },
+      { "name": "expected_loss", "aliases": ["Expected Loss"] },
+      { "name": "underwriting_expense", "aliases": ["Underwriting Expense"] },
+      { "name": "other_expense", "aliases": ["Other Expense"] },
+      { "name": "acquisition_expense", "aliases": ["Acquisition Expense"] },
+      { "name": "gross_written_premium", "aliases": ["Gross Written Premium", "GWP"] },
+      { "name": "premium_collected_amount", "aliases": ["Premium Collected Amount", "Cash Inflow"] },
+      { "name": "ibnr_amount", "aliases": ["IBNR Amount", "Reserve Amount"] },
+      { "name": "recoveries_amount", "aliases": ["Recoveries Amount", "Salvage"] },
+      { "name": "ceded_premium", "aliases": ["Ceded Premium"] },
+      { "name": "reinsurance_recovery", "aliases": ["Reinsurance Recovery"] },
+      { "name": "incurred_claim_amount", "aliases": ["Incurred Claim Amount", "Loss"] },
+      { "name": "paid_claim_amount", "aliases": ["Paid Claim Amount", "Cash Paid"] },
+      { "name": "renewal_flag", "aliases": ["Renewal Flag", "Is Renewal"] },
+
+      { "name": "gwp_amount",                 "aliases": ["Gross Written Premium", "GWP", "Written Premium"] },
+      { "name": "earned_premium_amount",       "aliases": ["Net Earned Premium", "Earned Premium", "Premium Collected"] },
+      { "name": "total_incurred_claims",       "aliases": ["Incurred Claims", "Incurred Claim Amount", "Loss Incurred"] },
+      { "name": "total_paid_claims",           "aliases": ["Paid Claims", "Paid Claim Amount", "Claims Paid"] },
+      { "name": "total_ibnr",                  "aliases": ["IBNR", "IBNR Reserve", "Reserve Amount", "IBNR Amount"] },
+      { "name": "total_ceded_premium",         "aliases": ["Ceded Premium", "Reinsurance Cession"] },
+      { "name": "total_reinsurance_recovery",  "aliases": ["Reinsurance Recovery", "RI Recovery"] },
+      { "name": "total_recoveries",            "aliases": ["Claim Recoveries", "Recoveries Amount", "Salvage"] },
+      { "name": "total_uw_expense",            "aliases": ["Underwriting Expense", "UW Expense"] },
+      { "name": "total_acquisition_expense",   "aliases": ["Acquisition Expense", "Commission Expense"] },
+      { "name": "total_other_expense",         "aliases": ["Other Expense", "Admin Expense"] }
+    ]
+  },
+  {
+    "name": "Dim_Policy",
+    "description": "Policy dimension containing detailed attributes, risk profiles, and lifecycle information.",
+    "columns": [
+      { "name": "policy_key", "aliases": ["Policy Key"] },
+      { "name": "policy_number", "aliases": ["Policy Number"] },
+      { "name": "policy_region", "aliases": ["Policy Region"] },
+      { "name": "policy_status", "aliases": ["Policy Status"] },
+      { "name": "policy_start_date", "aliases": ["Policy Start Date"] },
+      { "name": "policy_end_date", "aliases": ["Policy End Date"] },
+      { "name": "policy_lapsed_date", "aliases": ["Policy Lapsed Date"] },
+      { "name": "tenure_years", "aliases": ["Tenure Years"] },
+      { "name": "renewal_cycle_number", "aliases": ["Renewal Cycle"] },
+      { "name": "sum_insured", "aliases": ["Sum Insured"] },
+      { "name": "risk_band", "aliases": ["Risk Band"] },
+      { "name": "insured_asset", "aliases": ["Insured Asset"] },
+      { "name": "insured_asset_details", "aliases": ["Asset Details"] },
+      { "name": "billing_frequency", "aliases": ["Billing Frequency"] },
+      { "name": "billing_installments", "aliases": ["Billing Installments"] }
+    ]
+  },
+  {
+    "name": "Dim_Claim",
+    "description": "Claim dimension containing details about the nature, date, and severity of specific loss events.",
+    "columns": [
+      { "name": "claim_key", "aliases": ["Claim Key"] },
+      { "name": "claim_type", "aliases": ["Claim Type"] },
+      { "name": "claim_details", "aliases": ["Claim Details"] },
+      { "name": "claim_date", "aliases": ["Claim Date"] },
+      { "name": "claim_event_region", "aliases": ["Claim Region"] },
+      { "name": "event_severity", "aliases": ["Event Severity"] }
+    ]
+  },
+  {
+    "name": "Dim_Date",
+    "description": "Calendar and fiscal date dimensions.",
+    "columns": [
+      { "name": "date_key", "aliases": ["Date Key"] },
+      { "name": "date", "aliases": ["Date"] },
+      { "name": "month", "aliases": ["Month"] },
+      { "name": "quarter", "aliases": ["Quarter"] },
+      { "name": "year", "aliases": ["Year"] },
+      { "name": "fiscal_year", "aliases": ["Fiscal Year"] }
+    ]
+  },
+  {
+    "name": "Dim_Product",
+    "description": "Product hierarchy details.",
+    "columns": [
+      { "name": "product_key", "aliases": ["Product Key"] },
+      { "name": "product_name", "aliases": ["Product Name"] },
+      { "name": "line_of_business", "aliases": ["Line of Business"] },
+      { "name": "coverage_type", "aliases": ["Coverage Type"] }
+    ]
+  },
+  {
+    "name": "Dim_Channel",
+    "description": "Sales channel distribution details.",
+    "columns": [
+      { "name": "channel_key", "aliases": ["Channel Key"] },
+      { "name": "channel_type", "aliases": ["Channel Type"] },
+      { "name": "sub_channel", "aliases": ["Sub Channel"] },
+      { "name": "active_flag", "aliases": ["Active Flag"] }
+    ]
+  },
+  {
+    "name": "Dim_Segment",
+    "description": "Market segmentation details.",
+    "columns": [
+      { "name": "segment_key", "aliases": ["Segment Key"] },
+      { "name": "segment", "aliases": ["Segment"] },
+      { "name": "segment_customer_type", "aliases": ["Segment Customer Type"] },
+      { "name": "segment_geography", "aliases": ["Segment Geography"] }
+    ]
+  },
+  {
+    "name": "Dim_Broker",
+    "description": "Broker distributor details.",
+    "columns": [
+      { "name": "broker_key", "aliases": ["Broker Key"] },
+      { "name": "broker_name", "aliases": ["Broker Name"] },
+      { "name": "broker_type", "aliases": ["Broker Type"] },
+      { "name": "broker_region", "aliases": ["Broker Region"] },
+      { "name": "license_number", "aliases": ["License Number"] }
+    ]
+  },
+  {
+    "name": "Dim_Customer",
+    "description": "Insured customer details and demographics.",
+    "columns": [
+      { "name": "customer_key", "aliases": ["Customer Key"] },
+      { "name": "customer_name", "aliases": ["Customer Name"] },
+      { "name": "customer_entity_type", "aliases": ["Customer Entity Type"] },
+      { "name": "age_group", "aliases": ["Age Group"] },
+      { "name": "gender", "aliases": ["Gender"] },
+      { "name": "customer_geography", "aliases": ["Customer Geography"] },
+      { "name": "income_band", "aliases": ["Income Band"] }
+    ]
+  },
+  {
+    "name": "Dim_Underwriter",
+    "description": "Underwriting professional details.",
+    "columns": [
+      { "name": "underwriter_key", "aliases": ["Underwriter Key"] },
+      { "name": "underwriter_name", "aliases": ["Underwriter Name"] },
+      { "name": "team", "aliases": ["Team"] },
+      { "name": "underwriter_region", "aliases": ["Underwriter Region"] },
+      { "name": "seniority_level", "aliases": ["Seniority Level"] },
+      { "name": "manager_name", "aliases": ["Manager Name"] }
+    ]
+  }
+]

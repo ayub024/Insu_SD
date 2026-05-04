@@ -6,12 +6,14 @@ Claim rows are added in parallel when a real claim occurs.
 """
 
 from __future__ import annotations
+from functools import lru_cache
 
 from calendar import monthrange
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
+from generators.cat_engine import generate_cat_ibnr_rows
 from generators.financial_generator import generate_financials
 
 _FACT_COLUMNS = [
@@ -20,6 +22,7 @@ _FACT_COLUMNS = [
     "transaction_type",
     "policy_key",
     "date_key",
+    "policy_issue_date",
     "product_key",
     "segment_key",
     "underwriter_key",
@@ -47,6 +50,7 @@ _FACT_COLUMNS = [
 ]
 
 
+@lru_cache(maxsize=None)
 def _load_yaml(path: str) -> dict:
     try:
         import yaml
@@ -200,12 +204,13 @@ def _base_row(
         "transaction_type": transaction_type,
         "policy_key": policy["policy_key"],
         "date_key": _date_key(event_date),
-        "product_key": policy["product_key"],
-        "segment_key": policy["segment_key"],
-        "underwriter_key": policy["underwriter_key"],
+        "policy_issue_date": (_to_date(policy.get("policy_start_date", event_date)) - timedelta(days=5)).isoformat(),
+        "product_key": policy.get("product_key", ""),
+        "segment_key": policy.get("segment_key", ""),
+        "underwriter_key": policy.get("underwriter_key", ""),
         "broker_key": policy.get("broker_key"),
-        "customer_key": policy["customer_key"],
-        "channel_key": policy["channel_key"],
+        "customer_key": policy.get("customer_key", ""),
+        "channel_key": policy.get("channel_key", ""),
         "claim_key": claim_key,
         "pricing_decision_type": _pricing_decision_type(policy, world_state),
         "quoted_price": 0.0,
@@ -242,7 +247,7 @@ def _append_underwriting_events(policy: dict[str, Any], world_state: dict[str, A
     bound_type = "Renewal Policy Bound" if is_renewal else "Policy Bound"
     issued_type = "Renewal Policy Issued" if is_renewal else "Policy Issued"
 
-    quote = _base_row(policy, world_state, "Underwriting", quote_type, start_dt)
+    quote = _base_row(policy, world_state, "Underwriting", quote_type, start_dt - timedelta(days=15))
     quote.update(
         {
             "quoted_price": quoted,
@@ -253,7 +258,7 @@ def _append_underwriting_events(policy: dict[str, Any], world_state: dict[str, A
     )
     rows.append(quote)
 
-    approved = _base_row(policy, world_state, "Underwriting", approved_type, start_dt + timedelta(days=1))
+    approved = _base_row(policy, world_state, "Underwriting", approved_type, start_dt - timedelta(days=10))
     approved.update(
         {
             "quoted_price": quoted,
@@ -264,7 +269,7 @@ def _append_underwriting_events(policy: dict[str, Any], world_state: dict[str, A
     )
     rows.append(approved)
 
-    bound = _base_row(policy, world_state, "Underwriting", bound_type, start_dt + timedelta(days=2))
+    bound = _base_row(policy, world_state, "Underwriting", bound_type, start_dt - timedelta(days=5))
     bound.update(
         {
             "quoted_price": quoted,
@@ -279,40 +284,48 @@ def _append_underwriting_events(policy: dict[str, Any], world_state: dict[str, A
     )
     rows.append(bound)
 
-    issued = _base_row(policy, world_state, "Underwriting", issued_type, start_dt + timedelta(days=3))
-    rows.append(issued)
+
 
 
 def _append_billing_events(policy: dict[str, Any], world_state: dict[str, Any], rows: list[dict]) -> None:
     cfg = _load_yaml("config/billing_schedule.yaml").get("billing_schedule", {})
-    installments = int(cfg.get("default_installments", 12))
+    # Trait override: scenario_engine may have set billing_installments on the policy.
+    installments = int(policy.get("billing_installments") or cfg.get("default_installments", 12))
     decimals = int(cfg.get("rounding", {}).get("decimals", 2))
     start_dt = _to_date(policy["policy_start_date"])
     gwp = float(policy.get("gross_written_premium", 0.0) or 0.0)
-    monthly = round(gwp / installments, decimals)
+    installment_amount = round(gwp / installments, decimals)
     running_total = 0.0
 
-    schedule = _base_row(policy, world_state, "Billing", "Premium Schedule Created", start_dt)
-    rows.append(schedule)
+    # Lapse trait: how many payments are collected before the policy lapses?
+    lapse_type = str(policy.get("lapse_type") or "")
+    lapse_after_n = int(policy.get("lapse_after_n") or 0)
+    # early lapse = 0 payments; mid lapse = lapse_after_n payments
+    max_collections = 0 if lapse_type == "early" else (lapse_after_n if lapse_type == "mid" else installments)
 
+
+
+    month_step = 12 // installments if installments in (1, 2, 3, 4, 6, 12) else 1
+    collections_made = 0
     for month_idx in range(installments):
-        event_date = _add_months(start_dt, month_idx)
+        event_date = _add_months(start_dt, month_idx * month_step)
+
+        # Lapse cutoff: stop collecting if we have reached the lapse limit.
+        if lapse_type in ("early", "mid") and collections_made >= max_collections:
+            break
+
+        # Legacy lifecycle plan cutoff (cancellation/reinstatement path).
         lifecycle_plan = _policy_lifecycle_plan(policy, world_state)
         termination_date = lifecycle_plan.get("termination_date")
         reinstatement_date = lifecycle_plan.get("reinstatement_date")
         if termination_date and event_date >= termination_date and not reinstatement_date:
             break
 
-        invoice = _base_row(policy, world_state, "Billing", "Premium Invoice Generated", event_date)
-        rows.append(invoice)
-
-        amount = monthly
-        if month_idx == installments - 1:
-            amount = round(gwp - running_total, decimals)
-            event_type = "Final Premium Collection"
-        else:
-            event_type = "Monthly Premium Collected"
+        is_final = (month_idx == installments - 1) or (lapse_type == "mid" and collections_made == max_collections - 1)
+        amount = round(gwp - running_total, decimals) if is_final else installment_amount
+        event_type = "Premium Collected"
         running_total = round(running_total + amount, decimals)
+        collections_made += 1
 
         collected = _base_row(policy, world_state, "Billing", event_type, event_date)
         collected["premium_collected_amount"] = amount
@@ -440,6 +453,46 @@ def _policy_lifecycle_plan(policy: dict[str, Any], world_state: dict[str, Any]) 
     return plan
 
 
+def _append_endorsement(
+    policy: dict[str, Any],
+    world_state: dict[str, Any],
+    rows: list[dict],
+    month_offset: int,
+    direction: str,
+    idx: int,
+) -> None:
+    """Emit the full endorsement sequence."""
+    cfg = _load_yaml("config/policy_lifecycle_rules.yaml").get("policy_lifecycle_rules", {})
+    endorsement_cfg = cfg.get("endorsement", {})
+    start_dt = _to_date(policy["policy_start_date"])
+    pk = str(policy["policy_key"])
+
+    event_dt = _add_months(start_dt, month_offset)
+
+    gwp = float(policy.get("gross_written_premium", 0.0) or 0.0)
+    if direction == "increase":
+        adj_pct = _uniform_float(0.01, float(endorsement_cfg.get("premium_adjustment_max_pct", 0.20)),
+                                 f"{pk}|end_adj_{idx}", world_state)
+    else:
+        adj_pct = _uniform_float(float(endorsement_cfg.get("premium_adjustment_min_pct", -0.10)), -0.01,
+                                 f"{pk}|end_adj_{idx}", world_state)
+    adjustment_amount = round(gwp * adj_pct, 2)
+
+    transaction_types = endorsement_cfg.get("transaction_types", {})
+
+    endorsement = _base_row(policy, world_state, "Policy Servicing",
+                            str(transaction_types.get("single", "Endorsement")), event_dt)
+    
+    endorsement["underwriting_expense"] = 125.0
+    endorsement["other_expense"] = 125.0
+    endorsement["quoted_price"] = adjustment_amount
+    endorsement["bind_price"] = adjustment_amount
+    endorsement["gross_written_premium"] = adjustment_amount
+    endorsement["premium_collected_amount"] = adjustment_amount
+    
+    rows.append(endorsement)
+
+
 def _append_policy_servicing_events(policy: dict[str, Any], world_state: dict[str, Any], rows: list[dict]) -> None:
     cfg = _load_yaml("config/policy_lifecycle_rules.yaml").get("policy_lifecycle_rules", {})
     if not bool(cfg.get("servicing_enabled", True)):
@@ -447,91 +500,66 @@ def _append_policy_servicing_events(policy: dict[str, Any], world_state: dict[st
 
     start_dt = _to_date(policy["policy_start_date"])
     end_dt = _to_date(policy["policy_end_date"])
-    endorsement_probability = float(cfg.get("endorsement_probability", 0.0))
     lifecycle_plan = _policy_lifecycle_plan(policy, world_state)
 
-    if _event_occurs(endorsement_probability, f"{policy['policy_key']}|endorsement", world_state):
-        endorsement_cfg = cfg.get("endorsement", {})
-        min_month = int(endorsement_cfg.get("request_month_offset_min", 2))
-        max_month = int(endorsement_cfg.get("request_month_offset_max", 8))
-        request_month_offset = int(_uniform_float(min_month, max_month + 1, f"{policy['policy_key']}|endorsement_month", world_state))
-        request_dt = _add_months(start_dt, request_month_offset)
-        delay_min = int(endorsement_cfg.get("approval_delay_days_min", 3))
-        delay_max = int(endorsement_cfg.get("approval_delay_days_max", 14))
-        approval_delay = int(_uniform_float(delay_min, delay_max + 1, f"{policy['policy_key']}|endorsement_delay", world_state))
-        approved_dt = request_dt + timedelta(days=approval_delay)
-        adjustment_pct = _uniform_float(
-            float(endorsement_cfg.get("premium_adjustment_min_pct", -0.10)),
-            float(endorsement_cfg.get("premium_adjustment_max_pct", 0.20)),
-            f"{policy['policy_key']}|endorsement_adjustment_pct",
-            world_state,
-        )
-        gwp = float(policy.get("gross_written_premium", 0.0) or 0.0)
-        adjustment_amount = round(gwp * adjustment_pct, 2)
-        transaction_types = endorsement_cfg.get("transaction_types", {})
+    # ------------------------------------------------------------------
+    # Endorsements — driven by scenario_engine trait list.
+    # Falls back to legacy probability-based single endorsement if the
+    # trait key is absent (backward compat with policies generated without traits).
+    # ------------------------------------------------------------------
+    trait_endorsements: list[dict] = list(policy.get("endorsements") or [])
 
-        requested = _base_row(
-            policy,
-            world_state,
-            "Policy Servicing",
-            str(transaction_types.get("requested", "Endorsement Requested")),
-            request_dt,
-        )
-        requested["other_expense"] = 75.0
-        rows.append(requested)
-
-        approved = _base_row(
-            policy,
-            world_state,
-            "Policy Servicing",
-            str(transaction_types.get("approved", "Endorsement Approved")),
-            approved_dt,
-        )
-        approved["underwriting_expense"] = 125.0
-        approved["other_expense"] = 50.0
-        rows.append(approved)
-
-        coverage_changed = _base_row(
-            policy,
-            world_state,
-            "Policy Servicing",
-            str(transaction_types.get("coverage_changed", "Coverage Changed")),
-            approved_dt + timedelta(days=1),
-        )
-        coverage_changed["quoted_price"] = adjustment_amount
-        coverage_changed["bind_price"] = adjustment_amount
-        coverage_changed["gross_written_premium"] = adjustment_amount
-        rows.append(coverage_changed)
-
-        billing_adjustment = _base_row(
-            policy,
-            world_state,
-            "Billing",
-            str(transaction_types.get("billing_adjustment", "Premium Adjustment")),
-            approved_dt + timedelta(days=2),
-        )
-        billing_adjustment["premium_collected_amount"] = adjustment_amount
-        rows.append(billing_adjustment)
-
-    termination_date = lifecycle_plan.get("termination_date")
-    termination_type = lifecycle_plan.get("termination_type")
-    reinstatement_date = lifecycle_plan.get("reinstatement_date")
-    if termination_date and termination_type:
-        termination = _base_row(policy, world_state, "Policy Servicing", str(termination_type), termination_date)
-        termination["other_expense"] = 50.0
-        rows.append(termination)
-
-        if reinstatement_date:
-            reinstatement_cfg = cfg.get("reinstatement", {})
-            reinstatement = _base_row(
-                policy,
-                world_state,
-                "Policy Servicing",
-                str(reinstatement_cfg.get("transaction_type", "Policy Reinstated")),
-                reinstatement_date,
+    if trait_endorsements:
+        # Trait-driven multi-endorsement loop.
+        for idx, end_spec in enumerate(trait_endorsements):
+            _append_endorsement(
+                policy, world_state, rows,
+                month_offset=int(end_spec["month_offset"]),
+                direction=str(end_spec.get("direction", "increase")),
+                idx=idx,
             )
-            reinstatement["other_expense"] = 75.0
-            rows.append(reinstatement)
+    else:
+        # Legacy probability fallback (endorsement_probability from YAML).
+        endorsement_probability = float(cfg.get("endorsement_probability", 0.0))
+        if _event_occurs(endorsement_probability, f"{policy['policy_key']}|endorsement", world_state):
+            endorsement_cfg = cfg.get("endorsement", {})
+            min_month = int(endorsement_cfg.get("request_month_offset_min", 2))
+            max_month = int(endorsement_cfg.get("request_month_offset_max", 8))
+            mo = int(_uniform_float(min_month, max_month + 1, f"{policy['policy_key']}|endorsement_month", world_state))
+            _append_endorsement(policy, world_state, rows, month_offset=mo, direction="increase", idx=0)
+
+    # ------------------------------------------------------------------
+    # Lapse event — trait-driven date, or legacy lifecycle plan.
+    # ------------------------------------------------------------------
+    lapse_type = str(policy.get("lapse_type") or "")
+    if lapse_type in ("early", "mid"):
+        lapse_after_n = int(policy.get("lapse_after_n") or 0)
+        # Compute the lapse date from start + lapse_after_n months
+        total_month = start_dt.month - 1 + lapse_after_n
+        lapse_year = start_dt.year + total_month // 12
+        lapse_month = total_month % 12 + 1
+        lapse_day = min(start_dt.day, monthrange(lapse_year, lapse_month)[1])
+        trait_lapse_dt = date(lapse_year, lapse_month, lapse_day)
+        lapse_row = _base_row(policy, world_state, "Policy Servicing", "Policy Lapsed", trait_lapse_dt)
+        lapse_row["other_expense"] = 50.0
+        rows.append(lapse_row)
+    else:
+        # Legacy lifecycle plan (cancellation / reinstatement).
+        termination_date = lifecycle_plan.get("termination_date")
+        termination_type = lifecycle_plan.get("termination_type")
+        reinstatement_date = lifecycle_plan.get("reinstatement_date")
+        if termination_date and termination_type:
+            termination = _base_row(policy, world_state, "Policy Servicing", str(termination_type), termination_date)
+            termination["other_expense"] = 50.0
+            rows.append(termination)
+            if reinstatement_date:
+                reinstatement_cfg = cfg.get("reinstatement", {})
+                reinstatement = _base_row(
+                    policy, world_state, "Policy Servicing",
+                    str(reinstatement_cfg.get("transaction_type", "Policy Reinstated")), reinstatement_date,
+                )
+                reinstatement["other_expense"] = 75.0
+                rows.append(reinstatement)
 
     if bool(cfg.get("emit_policy_expired_event", True)):
         rows.append(_base_row(policy, world_state, "Policy Servicing", "Policy Expired", end_dt))
@@ -642,74 +670,136 @@ def _append_claim_events(
     if bool(claim.get("is_zero_claim") or claim.get("zero_claim")):
         return
 
+    _product_name = str(policy.get("product_name", ""))
+    _workflow_cfg = _load_yaml("config/claim_event_workflow.yaml").get("claim_event_workflow", {})
+    _probs = _workflow_cfg.get("probabilities", {})
+    _rare_probs = _probs.get("by_product", {}).get(_product_name, _probs.get("default", {}))
+
+    def _rare_prob(key: str, default: float) -> float:
+        return float(_rare_probs.get(key, default))
+
     claim_dt = _to_date(claim["claim_date"])
     ckey = _claim_key(world_state, str(policy["policy_key"]), claim.get("claim_index"), claim.get("claim_date"))
 
     financials = generate_financials(policy_obj=policy, claim_obj=claim, world_state=world_state)
-    incurred = float(financials["incurred_claim_amount"])
-    paid = float(financials["paid_claim_amount"])
-    ibnr = float(financials["ibnr_amount"])
-    recoveries = float(financials["recoveries_amount"])
+    incurred = float(financials.get("incurred_claim_amount") or 0.0)
+    paid = float(financials.get("paid_claim_amount") or 0.0)
+    ibnr = float(financials.get("ibnr_amount") or 0.0)
+    recoveries = float(financials.get("recoveries_amount") or 0.0)
     dim_claim_rows = world_state.setdefault("dim_claim_rows_by_key", {})
     dim_claim_rows[ckey] = _claim_dim_row(policy, claim, ckey, incurred)
 
+    # Apply CAT severity multiplier if the claim is tagged as a CAT claim.
+    cat_mult = float(claim.get("cat_severity_multiplier", 1.0))
+    if cat_mult != 1.0:
+        incurred = round(incurred * cat_mult, 2)
+        paid = round(paid * cat_mult, 2)
+        ibnr = round(ibnr * cat_mult, 2)
+        recoveries = round(recoveries * cat_mult, 2)
+
+    # ------------------------------------------------------------------
+    # Common opening events for all workflow types.
+    # ------------------------------------------------------------------
     _append_claim_event(policy, world_state, rows, ckey, "Claim Reported", claim_dt)
     _append_claim_event(policy, world_state, rows, ckey, "Claim Registered", claim_dt)
     _append_claim_event(policy, world_state, rows, ckey, "Claim Reserve Created", claim_dt, ibnr_amount=ibnr)
     _append_claim_event(policy, world_state, rows, ckey, "Claim Incurred", claim_dt, incurred_claim_amount=incurred, ibnr_amount=ibnr)
     _append_claim_event(policy, world_state, rows, ckey, "Claim Approved", claim_dt)
 
-    workflow_cfg = _load_yaml("config/claim_event_workflow.yaml").get("claim_event_workflow", {})
-    reserve_revision_probability = float(workflow_cfg.get("reserve_revision_probability", 0.20))
-    if _event_occurs(reserve_revision_probability, f"{ckey}|reserve_revision", world_state):
-        _append_claim_event(
-            policy,
-            world_state,
-            rows,
-            ckey,
-            "Claim Reserve Revised",
-            claim_dt,
-            ibnr_amount=round(ibnr * 0.75, 2),
-        )
+    # ------------------------------------------------------------------
+    # Workflow branching driven by claim_workflow trait on the policy.
+    # The trait is set by scenario_engine.apply_lifecycle_traits().
+    # Fall back to 'standard' if no trait is present.
+    # ------------------------------------------------------------------
+    workflow = str(policy.get("claim_workflow") or "standard")
 
-    financial_cfg = _load_yaml("config/claim_financials.yaml").get("claim_financials", {})
-    paid_pattern = financial_cfg.get("paid_pattern", {})
-    partial_probability = float(paid_pattern.get("partial_payment_probability", 0.70))
-    min_partial = float(paid_pattern.get("partial_payment_min_pct", 0.40))
-    max_partial = float(paid_pattern.get("partial_payment_max_pct", 0.75))
-    rng_manager = world_state.get("rng_manager")
-    if rng_manager is not None:
-        partial_pct = float(rng_manager.uniform(min_partial, max_partial, entity_seed=f"{ckey}|partial_pct"))
+    if workflow == "open":
+        # Open claim: reserve raised, no payment yet.  Just a reserve revision.
+        reserve_revision_probability = _rare_prob("reserve_revision_probability", 0.20)
+        if _event_occurs(reserve_revision_probability, f"{ckey}|reserve_revision", world_state):
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Reserve Revised", claim_dt,
+                                ibnr_amount=round(ibnr * 0.75, 2))
+        # No Claim Closed — policy is still open.
+
+    elif workflow == "recoveries":
+        # Recoveries: standard payment path + a recovery receipt.
+        reserve_revision_probability = _rare_prob("reserve_revision_probability", 0.20)
+        if _event_occurs(reserve_revision_probability, f"{ckey}|reserve_revision", world_state):
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Reserve Revised", claim_dt,
+                                ibnr_amount=round(ibnr * 0.75, 2))
+        financial_cfg = _load_yaml("config/claim_financials.yaml").get("claim_financials", {})
+        paid_pattern = financial_cfg.get("paid_pattern", {})
+        partial_probability = float(paid_pattern.get("partial_payment_probability", 0.70))
+        min_partial = float(paid_pattern.get("partial_payment_min_pct", 0.40))
+        max_partial = float(paid_pattern.get("partial_payment_max_pct", 0.75))
+        rng_manager = world_state.get("rng_manager")
+        partial_pct = float(rng_manager.uniform(min_partial, max_partial, entity_seed=f"{ckey}|partial_pct")) \
+            if rng_manager else (min_partial + max_partial) / 2.0
+        has_partial = paid > 0 and _event_occurs(partial_probability, f"{ckey}|partial_paid", world_state)
+        partial_paid = round(paid * partial_pct, 2) if has_partial else 0.0
+        final_paid = round(paid - partial_paid, 2)
+        if partial_paid > 0:
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Paid - Partial", claim_dt, paid_claim_amount=partial_paid)
+        if final_paid > 0:
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Paid - Final", claim_dt, paid_claim_amount=final_paid)
+        # Recovery receipt — always for this workflow type.
+        if recoveries > 0:
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Recovery Received", claim_dt, recoveries_amount=recoveries)
+        _append_reinsurance_claim_events(policy, world_state, rows, ckey, claim_dt, incurred)
+        _append_claim_event(policy, world_state, rows, ckey, "Claim Closed", claim_dt)
+
+    elif workflow == "long_tail":
+        # Long-tail: two Reserve → Pay cycles, then closed.
+        # Cycle 1 (at claim date).
+        _append_claim_event(policy, world_state, rows, ckey, "Claim Reserve Revised", claim_dt,
+                            ibnr_amount=round(ibnr * 0.80, 2))
+        cycle1_partial = round(paid * 0.40, 2)
+        cycle1_recovery = round(recoveries * 0.50, 2)
+        _append_claim_event(policy, world_state, rows, ckey, "Claim Paid - Partial", claim_dt, paid_claim_amount=cycle1_partial)
+        if cycle1_recovery > 0:
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Recovery Received", claim_dt, recoveries_amount=cycle1_recovery)
+        # Cycle 2 (~90 days later).
+        cycle2_dt = claim_dt + timedelta(days=90)
+        _append_claim_event(policy, world_state, rows, ckey, "Claim Reserve Revised", cycle2_dt,
+                            ibnr_amount=round(ibnr * 0.30, 2))
+        cycle2_paid = round(paid - cycle1_partial, 2)
+        cycle2_recovery = round(recoveries - cycle1_recovery, 2)
+        _append_claim_event(policy, world_state, rows, ckey, "Claim Paid - Final", cycle2_dt, paid_claim_amount=cycle2_paid)
+        if cycle2_recovery > 0:
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Recovery Received", cycle2_dt, recoveries_amount=cycle2_recovery)
+        _append_reinsurance_claim_events(policy, world_state, rows, ckey, claim_dt, incurred)
+        _append_claim_event(policy, world_state, rows, ckey, "Claim Closed", cycle2_dt)
+
     else:
-        partial_pct = (min_partial + max_partial) / 2.0
-
-    has_partial = paid > 0 and _event_occurs(partial_probability, f"{ckey}|partial_paid", world_state)
-    partial_paid = round(paid * partial_pct, 2) if has_partial else 0.0
-    final_paid = round(paid - partial_paid, 2)
-
-    if partial_paid > 0:
-        _append_claim_event(policy, world_state, rows, ckey, "Claim Paid - Partial", claim_dt, paid_claim_amount=partial_paid)
-    if final_paid > 0:
-        _append_claim_event(policy, world_state, rows, ckey, "Claim Paid - Final", claim_dt, paid_claim_amount=final_paid)
-    if recoveries > 0:
-        _append_claim_event(policy, world_state, rows, ckey, "Claim Recovery Received", claim_dt, recoveries_amount=recoveries)
-
-    _append_reinsurance_claim_events(policy, world_state, rows, ckey, claim_dt, incurred)
-
-    reopened_probability = float(workflow_cfg.get("reopened_claim_probability", 0.03))
-    if _event_occurs(reopened_probability, f"{ckey}|reopened", world_state):
-        _append_claim_event(policy, world_state, rows, ckey, "Claim Reopened", claim_dt)
-        _append_claim_event(
-            policy,
-            world_state,
-            rows,
-            ckey,
-            "Claim Reserve Revised",
-            claim_dt,
-            ibnr_amount=round(ibnr * 0.50, 2),
-        )
-
-    _append_claim_event(policy, world_state, rows, ckey, "Claim Closed", claim_dt)
+        # Standard (default): linear payment path.
+        reserve_revision_probability = _rare_prob("reserve_revision_probability", 0.20)
+        if _event_occurs(reserve_revision_probability, f"{ckey}|reserve_revision", world_state):
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Reserve Revised", claim_dt,
+                                ibnr_amount=round(ibnr * 0.75, 2))
+        financial_cfg = _load_yaml("config/claim_financials.yaml").get("claim_financials", {})
+        paid_pattern = financial_cfg.get("paid_pattern", {})
+        partial_probability = float(paid_pattern.get("partial_payment_probability", 0.70))
+        min_partial = float(paid_pattern.get("partial_payment_min_pct", 0.40))
+        max_partial = float(paid_pattern.get("partial_payment_max_pct", 0.75))
+        rng_manager = world_state.get("rng_manager")
+        partial_pct = float(rng_manager.uniform(min_partial, max_partial, entity_seed=f"{ckey}|partial_pct")) \
+            if rng_manager else (min_partial + max_partial) / 2.0
+        has_partial = paid > 0 and _event_occurs(partial_probability, f"{ckey}|partial_paid", world_state)
+        partial_paid = round(paid * partial_pct, 2) if has_partial else 0.0
+        final_paid = round(paid - partial_paid, 2)
+        if partial_paid > 0:
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Paid - Partial", claim_dt, paid_claim_amount=partial_paid)
+        if final_paid > 0:
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Paid - Final", claim_dt, paid_claim_amount=final_paid)
+        if recoveries > 0:
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Recovery Received", claim_dt, recoveries_amount=recoveries)
+        _append_reinsurance_claim_events(policy, world_state, rows, ckey, claim_dt, incurred)
+        reopened_probability = _rare_prob("reopened_claim_probability", 0.03)
+        if _event_occurs(reopened_probability, f"{ckey}|reopened", world_state):
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Reopened", claim_dt)
+            _append_claim_event(policy, world_state, rows, ckey, "Claim Reserve Revised", claim_dt,
+                                ibnr_amount=round(ibnr * 0.50, 2))
+        _append_claim_event(policy, world_state, rows, ckey, "Claim Closed", claim_dt)
 
 
 def build_policy_transaction_event_rows(
@@ -732,6 +822,20 @@ def build_policy_transaction_event_rows(
         for claim in claims_by_policy.get(str(policy["policy_key"]), []):
             _append_claim_events(policy, claim, world_state, rows)
         _append_policy_servicing_events(policy, world_state, rows)
+
+        # CAT IBNR rows — one per applicable CAT event, independent of reported claims.
+        cat_rows = generate_cat_ibnr_rows(
+            policy=policy,
+            world_state=world_state,
+            base_row_fn=_base_row,
+            transaction_id_fn=_transaction_id,
+        )
+        # Strip extra CAT metadata columns before appending (not in _FACT_COLUMNS).
+        for cr in cat_rows:
+            cr.pop("cat_event_id", None)
+            cr.pop("cat_event_name", None)
+            cr.pop("cat_peril", None)
+            rows.append(cr)
 
     rows.sort(key=lambda r: (r["date_key"], str(r["policy_key"]), str(r["transaction_id"])))
 

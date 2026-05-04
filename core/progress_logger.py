@@ -77,9 +77,17 @@ def log_month_summary(
 
     channel_counter = Counter(str(p.get("channel_type")) for p in policy_rows if p.get("channel_type") is not None)
     region_counter = Counter(str(p.get("geography")) for p in policy_rows if p.get("geography") is not None)
+    billing_counter = Counter(str(p.get("billing_frequency")) for p in policy_rows if p.get("billing_frequency") is not None)
+    claim_wf_counter = Counter(str(p.get("claim_workflow")) for p in policy_rows if p.get("claim_workflow") is not None)
+    lapse_counter = Counter(str(p.get("lapse_type") or "none") for p in policy_rows)
+    endorse_counter = Counter(str(p.get("endorsement_type") or "none") for p in policy_rows)
 
     channel_mix = _mix(channel_counter, ["Direct", "Broker", "Bancassurance"])
     region_mix = _mix(region_counter, ["Midwest", "Southeast", "Northeast", "Southwest", "West"])
+    billing_mix = _mix(billing_counter, ["monthly", "quarterly", "annual"])
+    claim_wf_mix = _mix(claim_wf_counter, ["standard", "long_tail", "open", "recoveries"])
+    lapse_mix = _mix(lapse_counter, ["none", "early", "mid"])
+    endorse_mix = _mix(endorse_counter, ["none", "single_increase", "single_decrease", "multiple"])
 
     avg_gwp = _avg([_safe_float(r.get("gross_written_premium")) for r in fact_rows])
     avg_incurred = _avg([_safe_float(r.get("incurred_claim_amount")) for r in fact_rows])
@@ -118,6 +126,32 @@ def log_month_summary(
         f"Northeast={_fmt_pct(region_mix['Northeast'])} "
         f"Southwest={_fmt_pct(region_mix['Southwest'])} "
         f"West={_fmt_pct(region_mix['West'])}"
+    )
+    print(
+        "          billing_mix: "
+        f"monthly={_fmt_pct(billing_mix['monthly'])} "
+        f"quarterly={_fmt_pct(billing_mix['quarterly'])} "
+        f"annual={_fmt_pct(billing_mix['annual'])}"
+    )
+    print(
+        "          claim_workflow_mix: "
+        f"standard={_fmt_pct(claim_wf_mix['standard'])} "
+        f"long_tail={_fmt_pct(claim_wf_mix['long_tail'])} "
+        f"open={_fmt_pct(claim_wf_mix['open'])} "
+        f"recoveries={_fmt_pct(claim_wf_mix['recoveries'])}"
+    )
+    print(
+        "          lapse_mix: "
+        f"none={_fmt_pct(lapse_mix['none'])} "
+        f"early={_fmt_pct(lapse_mix['early'])} "
+        f"mid={_fmt_pct(lapse_mix['mid'])}"
+    )
+    print(
+        "          endorsement_mix: "
+        f"none={_fmt_pct(endorse_mix['none'])} "
+        f"single_increase={_fmt_pct(endorse_mix['single_increase'])} "
+        f"single_decrease={_fmt_pct(endorse_mix['single_decrease'])} "
+        f"multiple={_fmt_pct(endorse_mix['multiple'])}"
     )
     print(
         "          "
@@ -176,6 +210,10 @@ def log_year_summary(
 
     channel_mix = _mix(year_acc.get("channel_counter", Counter()), ["Direct", "Broker", "Bancassurance"])
     region_mix = _mix(year_acc.get("region_counter", Counter()), ["Midwest", "Southeast", "Northeast", "Southwest", "West"])
+    billing_mix = _mix(year_acc.get("billing_counter", Counter()), ["monthly", "quarterly", "annual"])
+    claim_wf_mix = _mix(year_acc.get("claim_wf_counter", Counter()), ["standard", "long_tail", "open", "recoveries"])
+    lapse_mix = _mix(year_acc.get("lapse_counter", Counter()), ["none", "early", "mid"])
+    endorse_mix = _mix(year_acc.get("endorse_counter", Counter()), ["none", "single_increase", "single_decrease", "multiple"])
 
     avg_claims_per_policy = (fact_rows / unique_policies) if unique_policies > 0 else None
 
@@ -212,6 +250,32 @@ def log_year_summary(
         f"Southwest={_fmt_pct(region_mix['Southwest'])} "
         f"West={_fmt_pct(region_mix['West'])}"
     )
+    print(
+        "billing_mix: "
+        f"monthly={_fmt_pct(billing_mix['monthly'])} "
+        f"quarterly={_fmt_pct(billing_mix['quarterly'])} "
+        f"annual={_fmt_pct(billing_mix['annual'])}"
+    )
+    print(
+        "claim_workflow_mix: "
+        f"standard={_fmt_pct(claim_wf_mix['standard'])} "
+        f"long_tail={_fmt_pct(claim_wf_mix['long_tail'])} "
+        f"open={_fmt_pct(claim_wf_mix['open'])} "
+        f"recoveries={_fmt_pct(claim_wf_mix['recoveries'])}"
+    )
+    print(
+        "lapse_mix: "
+        f"none={_fmt_pct(lapse_mix['none'])} "
+        f"early={_fmt_pct(lapse_mix['early'])} "
+        f"mid={_fmt_pct(lapse_mix['mid'])}"
+    )
+    print(
+        "endorsement_mix: "
+        f"none={_fmt_pct(endorse_mix['none'])} "
+        f"single_increase={_fmt_pct(endorse_mix['single_increase'])} "
+        f"single_decrease={_fmt_pct(endorse_mix['single_decrease'])} "
+        f"multiple={_fmt_pct(endorse_mix['multiple'])}"
+    )
     print("")
     print("Financial KPIs (annual totals):")
     print(f"- total_gwp = {_fmt_money(_safe_float(ft.get('gross_written_premium')))}")
@@ -232,8 +296,8 @@ def log_year_summary(
     print(f"- combined_ratio = {_fmt_ratio(combined_ratio)}")
     print("")
     print("Claim KPIs:")
-    print(f"- avg_claims_per_policy (use fact rows per policy) = {_fmt_ratio(avg_claims_per_policy)}")
-    print(f"- 0-claim policy rate (should be ~30%) = {_fmt_pct(zero_claim_rate)}")
+    print(f"- avg_facts_per_policy = {_fmt_ratio(avg_claims_per_policy)}")
+    print(f"- 0-claim policy rate (varies 60-90% by product) = {_fmt_pct(zero_claim_rate)}")
     print(f"- avg_incurred_per_claim = {_fmt_money(avg_incurred_per_claim)}")
     print(f"- avg_paid_per_claim = {_fmt_money(avg_paid_per_claim)}")
     print("")

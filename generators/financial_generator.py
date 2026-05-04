@@ -1,6 +1,7 @@
 """Financial metric generation for Fact_Policy claim-level rows (Option A)."""
 
 from __future__ import annotations
+from functools import lru_cache
 
 from datetime import date
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Any, Optional
 import numpy as np
 
 
+@lru_cache(maxsize=None)
 def _load_yaml(path: str) -> dict:
     try:
         import yaml
@@ -112,6 +114,12 @@ def _is_zero_claim(claim_obj: dict[str, Any]) -> bool:
 
 def _round2(x: float) -> float:
     return float(round(float(x), 2))
+
+
+def _nullify_zero(val: float | None) -> float | None:
+    if val is None or val == 0.0:
+        return None
+    return val
 
 
 def _default_severity_config() -> dict[str, dict[str, float]]:
@@ -341,12 +349,12 @@ def generate_financials(
 
     # Claim-level computations.
     if _is_zero_claim(claim_obj):
-        incurred = 0.0
-        paid = 0.0
-        outstanding = 0.0
-        ibnr = 0.0
-        recoveries = 0.0
-        reinsurance_recovery = 0.0
+        incurred = None
+        paid = None
+        outstanding = None
+        ibnr = None
+        recoveries = None
+        reinsurance_recovery = None
     else:
         gwp = float(cached["gross_written_premium"])
         ceded = float(cached["ceded_premium"])
@@ -484,17 +492,17 @@ def generate_financials(
         reinsurance_recovery = _clamp(reinsurance_recovery, 0.0, incurred)
 
     return {
-        "gross_written_premium": _round2(max(0.0, float(cached["gross_written_premium"]))),
-        "ibnr_amount": _round2(max(0.0, ibnr)),
-        "recoveries_amount": _round2(max(0.0, recoveries)),
-        "ceded_premium": _round2(_clamp(float(cached["ceded_premium"]), 0.0, float(cached["gross_written_premium"]))),
-        "reinsurance_recovery": _round2(max(0.0, reinsurance_recovery)),
-        "net_earned_premium": _round2(_clamp(float(cached["net_earned_premium"]), 0.0, float(cached["gross_written_premium"]))),
-        "incurred_claim_amount": _round2(max(0.0, incurred)),
-        "paid_claim_amount": _round2(_clamp(paid, 0.0, incurred)),
-        "outstanding_reserve": _round2(_clamp(outstanding, 0.0, incurred)),
-        "operating_expense": _round2(max(0.0, float(cached["operating_expense"]))),
-        "acquisition_expense": _round2(max(0.0, float(cached["acquisition_expense"]))),
+        "gross_written_premium": _nullify_zero(_round2(max(0.0, float(cached["gross_written_premium"])))),
+        "ibnr_amount": _nullify_zero(_round2(max(0.0, ibnr)) if ibnr is not None else None),
+        "recoveries_amount": _nullify_zero(_round2(max(0.0, recoveries)) if recoveries is not None else None),
+        "ceded_premium": _nullify_zero(_round2(_clamp(float(cached["ceded_premium"]), 0.0, float(cached["gross_written_premium"])))),
+        "reinsurance_recovery": _nullify_zero(_round2(max(0.0, reinsurance_recovery)) if reinsurance_recovery is not None else None),
+        "net_earned_premium": _nullify_zero(_round2(_clamp(float(cached["net_earned_premium"]), 0.0, float(cached["gross_written_premium"])))),
+        "incurred_claim_amount": _nullify_zero(_round2(max(0.0, incurred)) if incurred is not None else None),
+        "paid_claim_amount": _nullify_zero(_round2(_clamp(paid, 0.0, incurred)) if paid is not None else None),
+        "outstanding_reserve": _nullify_zero(_round2(_clamp(outstanding, 0.0, incurred)) if outstanding is not None else None),
+        "operating_expense": _nullify_zero(_round2(max(0.0, float(cached["operating_expense"])))),
+        "acquisition_expense": _nullify_zero(_round2(max(0.0, float(cached["acquisition_expense"])))),
         "new_policy_flag": bool(cached["new_policy_flag"]),
         "renewal_flag": bool(cached["renewal_flag"]),
     }

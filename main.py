@@ -1,6 +1,8 @@
 """Main orchestrator for synthetic insurance data generation."""
 
 from __future__ import annotations
+from functools import lru_cache
+import os
 import random
 
 from collections import Counter
@@ -28,6 +30,7 @@ from validators.rule_validator import validate_fact_policy_rows
 from writers.csv_writer import append_fact_rows, sort_fact_file_by_date_key, write_dimensions
 
 
+@lru_cache(maxsize=None)
 def _load_yaml(path: str) -> dict:
     import yaml
 
@@ -126,6 +129,10 @@ def _new_year_accumulator() -> dict[str, Any]:
         "customer_keys": set(),
         "channel_counter": Counter(),
         "region_counter": Counter(),
+        "billing_counter": Counter(),
+        "claim_wf_counter": Counter(),
+        "lapse_counter": Counter(),
+        "endorse_counter": Counter(),
         "financial_totals": {
             "gross_written_premium": 0.0,
             "premium_collected_amount": 0.0,
@@ -156,6 +163,12 @@ def _update_year_accumulator(
             year_acc["channel_counter"][str(p.get("channel_type"))] += 1
         if p.get("geography") is not None:
             year_acc["region_counter"][str(p.get("geography"))] += 1
+        if p.get("billing_frequency") is not None:
+            year_acc["billing_counter"][str(p.get("billing_frequency"))] += 1
+        if p.get("claim_workflow") is not None:
+            year_acc["claim_wf_counter"][str(p.get("claim_workflow"))] += 1
+        year_acc["lapse_counter"][str(p.get("lapse_type") or "none")] += 1
+        year_acc["endorse_counter"][str(p.get("endorsement_type") or "none")] += 1
 
     for r in fact_rows:
         year_acc["fact_rows"] += 1
@@ -188,17 +201,19 @@ def _update_year_accumulator(
         ft["recoveries_amount"] += recoveries
 
 
-def run() -> dict[str, Any]:
+def run(scenario_path: str = os.getenv("SCENARIO_PATH", "config/scenario.yaml")) -> dict[str, Any]:
     # 1) Load configs.
-    scenario = _load_yaml("config/scenario.yaml").get("scenario", {})
+    scenario = _load_yaml(os.getenv("SCENARIO_PATH", "config/scenario.yaml")).get("scenario", {})
     presets = scenario.get("presets", {})
 
     fin_cfg = _load_yaml("config/financial_assumptions.yaml").get("financial_assumptions", {})
     yoy_cfg = fin_cfg.get("yoy_premium_growth", {})
 
-    # Preferred mode selector (strict): scenario.mode in {"dev", "prod"}.
+    output_dir = scenario.get("output_dir", "output")
+
+    # Preferred mode selector (strict): scenario.mode in {"dev", "prod", "validation"}.
     mode = str(scenario.get("mode", "")).strip().lower()
-    if mode not in {"dev", "prod"}:
+    if mode not in {"dev", "prod", "validation"}:
         # Backward-compatible fallback for older config shape.
         dev_mode = bool(scenario.get("dev_mode", False))
         prod_mode = bool(scenario.get("prod_mode", False))
@@ -249,12 +264,12 @@ def run() -> dict[str, Any]:
     growth_engine = GrowthEngine()
 
     # Reset fact output file for a clean run.
-    fact_path = Path("output/fact_policy.csv")
+    fact_path = Path(output_dir) / "fact_policy.csv"
     if fact_path.exists():
         fact_path.unlink()
 
     # Create output CSVs upfront so fact + all dimensions always exist during a run.
-    append_fact_rows([], output_dir="output", filename="fact_policy.csv")
+    append_fact_rows([], output_dir=output_dir, filename="fact_policy.csv")
     write_dimensions(
         {
             "dim_date": dim_date,
@@ -267,7 +282,7 @@ def run() -> dict[str, Any]:
             "dim_underwriter": initial_underwriters,
             "dim_claim": [],
         },
-        output_dir="output",
+        output_dir=output_dir,
         overwrite=True,
     )
 
@@ -402,7 +417,7 @@ def run() -> dict[str, Any]:
                 ws.update_workload(str(p["underwriter_key"]), month=month_key, increment=1)
 
             # append to CSV
-            append_fact_rows(fact_rows, output_dir="output", filename="fact_policy.csv")
+            append_fact_rows(fact_rows, output_dir=output_dir, filename="fact_policy.csv")
             # all_fact_rows accumulation removed to prevent MemoryError
             for r in fact_rows:
                 running_totals["fact_rows"] += 1
@@ -478,12 +493,12 @@ def run() -> dict[str, Any]:
             "dim_underwriter": dim_underwriter,
             "dim_claim": dim_claim,
         },
-        output_dir="output",
+        output_dir=output_dir,
         overwrite=True,
     )
 
     # Keep final fact output in strict chronological order.
-    sort_fact_file_by_date_key(output_dir="output", filename="fact_policy.csv")
+    sort_fact_file_by_date_key(output_dir=output_dir, filename="fact_policy.csv")
 
     # final distribution validation report
     product_lookup = _index(dim_product, "product_key")
@@ -508,6 +523,12 @@ def run() -> dict[str, Any]:
 
 
 if __name__ == "__main__":
+    import argparse
+    import os
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scenario", type=str, default=os.getenv("SCENARIO_PATH", "config/scenario.yaml"))
+    args = parser.parse_args()
+    os.environ["SCENARIO_PATH"] = args.scenario
     result = run()
     print("Generation completed")
     print(f"fact_rows={result['fact_rows']}")

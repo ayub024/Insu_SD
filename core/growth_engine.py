@@ -1,6 +1,8 @@
 """Growth engine for non-static monthly policy/broker/underwriter targets."""
 
 from __future__ import annotations
+from functools import lru_cache
+import os
 
 from datetime import date
 from pathlib import Path
@@ -30,6 +32,7 @@ def _month_iter(start: date, end: date) -> list[date]:
     return months
 
 
+@lru_cache(maxsize=None)
 def _load_yaml(path: str) -> dict:
     try:
         import yaml
@@ -64,7 +67,7 @@ class GrowthEngine:
     def __init__(
         self,
         growth_curves_path: str = "config/growth_curves.yaml",
-        scenario_path: str = "config/scenario.yaml",
+        scenario_path: str = os.getenv("SCENARIO_PATH", "config/scenario.yaml"),
     ) -> None:
         growth_payload = _load_yaml(growth_curves_path)
         scenario_payload = _load_yaml(scenario_path)

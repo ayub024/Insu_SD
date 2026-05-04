@@ -1,0 +1,86 @@
+# ------------------------------------------------------------------
+# CAT (Catastrophe) Event Catalogue
+# Defines region-scoped incidents that trigger bulk IBNR generation
+# and tagged claims for all eligible policies in the affected area.
+#
+# Fields per event:
+#   id                 – unique identifier, used as cat_event_id on claims
+#   name               – human-readable label (appears in claim_reason)
+#   peril              – peril type string  (Flood, Wildfire, Hurricane, etc.)
+#   affected_region    – must match geography values in geo_distribution.yaml
+#   event_date         – ISO date of the incident
+#   ibnr_window_days   – how many days after event_date to raise IBNR
+#                        (policies whose term covers [event_date,
+#                         event_date + ibnr_window_days] are in scope)
+#   severity_multiplier – applied to incurred claim amounts for affected claims
+#   eligible_lob       – list of line_of_business values that qualify
+# ------------------------------------------------------------------
+
+cat_events:
+
+  - id: CAT-2022-01
+    name: "Southeast Tornado Outbreak — Apr 2022"
+    peril: Tornado
+    affected_region: Southeast
+    event_date: "2022-04-12"
+    ibnr_window_days: 90
+    severity_multiplier: 1.40
+    eligible_lob:
+      - Commercial Property
+      - Personal Property
+
+  - id: CAT-2023-01
+    name: "Southwest Wildfire Season — Jul 2023"
+    peril: Wildfire
+    affected_region: Southwest
+    event_date: "2023-07-20"
+    ibnr_window_days: 120
+    severity_multiplier: 1.65
+    eligible_lob:
+      - Commercial Property
+      - Personal Property
+
+  - id: CAT-2024-01
+    name: "Northeast Winter Storm — Jan 2024"
+    peril: Winter Storm
+    affected_region: Northeast
+    event_date: "2024-01-15"
+    ibnr_window_days: 60
+    severity_multiplier: 1.25
+    eligible_lob:
+      - Commercial Property
+      - Personal Property
+
+  - id: CAT-2024-02
+    name: "Southeast Hurricane — Sep 2024"
+    peril: Hurricane
+    affected_region: Southeast
+    event_date: "2024-09-05"
+    ibnr_window_days: 180
+    severity_multiplier: 2.10
+    eligible_lob:
+      - Commercial Property
+      - Personal Property
+      - Personal Casualty
+
+  - id: CAT-2025-01
+    name: "Midwest Flash Floods — Jun 2025"
+    peril: Flood
+    affected_region: Midwest
+    event_date: "2025-06-10"
+    ibnr_window_days: 90
+    severity_multiplier: 1.55
+    eligible_lob:
+      - Commercial Property
+      - Personal Property
+
+  - id: CAT-2026-01
+    name: "West Coast Atmospheric River — Jan 2026"
+    peril: Flood
+    affected_region: West
+    event_date: "2026-01-20"
+    ibnr_window_days: 60
+    severity_multiplier: 1.35
+    eligible_lob:
+      - Commercial Property
+      - Personal Property

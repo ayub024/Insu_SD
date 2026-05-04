@@ -201,15 +201,15 @@ def generate_dashboards(writer, csv_dir: Path):
 
 def main():
     print("Starting Excel Output Generation...")
-    output_dir = Path("output")
-    if not output_dir.exists():
-        print("No output directory found. Please run main.py first.")
+    output_root = Path(os.getenv("EXPORT_ROOT", "output"))
+    if not output_root.exists():
+        print(f"No output directory found at {output_root}. Please run main.py first.")
         return
 
     # Find the most recently generated run directory
-    run_dirs = sorted([d for d in output_dir.iterdir() if d.is_dir() and d.name.startswith("run_")])
+    run_dirs = sorted([d for d in output_root.iterdir() if d.is_dir() and d.name.startswith("run_")])
     if not run_dirs:
-        print("No run directories found in output/.")
+        print(f"No run directories found in {output_root}.")
         return
 
     latest_run = run_dirs[-1]

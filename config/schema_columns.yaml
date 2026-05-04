@@ -45,3 +45,5 @@ tables:
       - risk_band
       - insured_asset
       - insured_asset_details
+      - billing_frequency
+      - billing_installments
