@@ -1,52 +1,61 @@
-# Synthetic Insurance Generator - AI Context & Documentation
+# Synthetic Actuarial Insurance Engine
 
-**[ATTENTION FUTURE LLMs / AI AGENTS]**  
-If you are reading this file, you have been tasked with understanding, querying, or analyzing this synthetic insurance dataset. Read this document carefully. It contains the exact mathematical rules, architectural constraints, and intentional blindspots built into the data. **Do not hallucinate columns or metrics that contradict this document.**
+An enterprise-grade, event-driven synthetic data generator that simulates realistic Property & Casualty (P&C) insurance portfolios. It produces a fully self-balancing double-entry accounting ledger of policies, billing schedules, endorsements, and claims.
+
+## Quick Start
+
+### 1. Requirements
+- Python 3.10+
+- `pip install -r requirements.txt`
+
+### 2. Generate Data
+```bash
+# Generate the dataset using production constraints
+python main.py --scenario prod
+```
+The engine will output Parquet files into the `output/run_<timestamp>/parquet/` directory, containing millions of rows of actuarially realistic fact events.
 
 ---
 
-## 1. Project Purpose & Execution
-This project generates a highly realistic, actuarially sound synthetic Property & Casualty (P&C) insurance dataset using a strict Star Schema.
+## High-Level Code Flow
 
-*   **To Run:** Execute `python main.py` in the root directory.
-*   **Speed/Scale:** Target volume is controlled in `config/scenario.yaml`. The `prod` setting generates approximately 300,000 to 400,000 fact rows across 4 years (2022-2025) in ~3-4 minutes.
-*   **Outputs:** CSV files are written to the `output/` directory.
+The application executes in a deterministic pipeline, streaming data directly to disk to minimize memory usage:
 
-## 2. Core Architecture & Grain
-*   **Fact Table Grain (`fact_policy.csv`):** The grain is strictly **CLAIM-LEVEL**. 
-    *   1 Row = 1 Claim. 
-    *   If a policy has 0 claims, it will appear as exactly **1 row** with all claim financial amounts set to `$0.00`.
-*   **Strict Schema:** There is exactly 1 Fact table (`fact_policy`) and 8 Dimension tables (`dim_policy`, `dim_product`, `dim_date`, `dim_channel`, `dim_segment`, `dim_broker`, `dim_customer`, `dim_underwriter`).
+```mermaid
+graph TD
+    A[main.py: Entry Point] --> B[config/: Load Scenarios]
+    B --> C[master_data/: Generate Dimensions]
+    C --> D[simulation_engine: Loop Time T]
+    D --> E[generators/: Spawn Policy/Claim Events]
+    E --> F[fact_builders/: Map Events to Schema]
+    F --> G[validators/: Apply Accounting Rules]
+    G --> H[writers/: Stream Parquet to Disk]
+```
 
-## 3. Mathematical Business Rules (Actuarial Realism)
-We engineered specific actuarial phenomena into the data. If you write queries analyzing this data, you will find these exact trends:
+## Directory Structure
+To help you navigate the codebase, here is the functional layout:
 
-1.  **Term-Level Policy Architecture:** 
-    *   `policy_number` represents the base insurance contract (e.g., `POL-12345`).
-    *   `policy_key` represents the specific 12-month annual term (e.g., `POL-12345-01`, `POL-12345-02`). 
-    *   Renewals are tracked by the suffix.
-2.  **Premium Inflation (Upward Pricing):** 
-    *   There is a hardcoded compound inflation rate. `gross_written_premium` **always increases** by +4% to +8% upon every policy renewal. Premium deflation does not exist.
-3.  **Expense Dynamics & New Business Strain:** 
-    *   **Acquisition Expenses** are heavily penalized on Year 1 (New Business), ranging from 8% to 15%. 
-    *   Upon renewal (`tenure_years > 0`), acquisition expenses drastically drop to ~2%. 
-    *   *Result:* Older, renewed cohorts are mathematically guaranteed to have a lower Expense Ratio and higher profitability than new cohorts.
-4.  **Macroeconomic Shock & Volatility:** 
-    *   To prevent the "Law of Large Numbers" from perfectly flattening the data, claim severity is subjected to a **12-month cyclical Sine wave** combined with aggressive (+/- 25%) deterministic monthly noise. 
-    *   Crucially, this shock is seeded by the **Claim Occurrence Date**, meaning aggregated month-to-month Loss Ratios will bounce violently and realistically (e.g., dropping from 0.72 to 0.54, then spiking to 0.81).
-5.  **Net Earned Premium:** 
-    *   We use `net_earned_premium`, which is calculated dynamically as `(GWP - ceded_premium) * elapsed_time_ratio`.
+- `main.py`: The entry point that orchestrates the simulation timeline.
+- `config/`: Contains all YAML files controlling data scale, frequencies, and actuarial parameters.
+- `generators/`: Contains the stochastical generation logic (e.g., `policy_generator.py`, `claim_generator.py`).
+- `fact_builders/`: Transforms the raw generated events into the strict database schema layout (`policy_transaction_event_builder.py`).
+- `master_data/`: Maintains the state of dimensions like `Dim_Customer` and `Dim_Policy` across time steps.
+- `validators/`: Ensures no mathematical impossibilities exist (e.g., paid claims exceeding incurred claims).
+- `writers/`: Implements PyArrow chunking to write massive datasets to `.parquet` without crashing RAM.
+- `docs/`: The comprehensive developer and business documentation suite.
 
-## 4. Intentional Blindspots (Do Not Hallucinate)
-The following data dimensions and operational workflows were **intentionally omitted** from the synthetic generator. If a user asks a question requiring this data, you must gracefully explain that the schema does not support it:
+---
 
-*   **Cause of Loss / Perils:** The data records the financial `incurred_claim_amount`, but there is no `dim_peril` table. You cannot query for "Hurricane", "Fire", or "Water Damage".
-*   **Reinsurance Treaties:** While the math for `ceded_premium` exists, there is no `dim_reinsurance` table. You cannot query specific Reinsurance Companies, Treaty Names, or Attachment Points.
-*   **Settlement Lag / Claim Lifecycle:** The fact table records a single `date_key` representing the Claim Occurrence Date. There is no `reporting_date` or `closed_date`, making it impossible to calculate "Days to Settle".
-*   **Mid-Term Cancellations & Billing:** The data captures the final financial snapshot of the policy term. There is no data regarding mid-term cancellation refunds, unpaid premium defaults, or late payment fees.
-*   **Underwriting Exceptions & Quoting:** There is no pipeline data. You cannot query win/loss quoting ratios, competitor pricing, or declined applications.
+## Documentation Index
 
-## 5. Configuration Files
-To adjust the behavior of the generator, modify the YAML files in the `config/` directory:
-*   `scenario.yaml`: Adjust date ranges, target policy scales, channel distribution targets, and target loss ratios.
-*   `financial_assumptions.yaml`: Adjust baseline severity scaling, expense caps, regional multipliers, and IBNR (Incurred But Not Reported) reserve targets.
+The documentation is split into targeted guides to serve different stakeholders:
+1. **[Business Context & Features](docs/1_Business_Context_&_Features.md)**
+   Explains the domain lifecycle (Quote -> Bind -> Claim -> Renewal), policy timeline views, and catastrophic math.
+2. **[Data Dictionary & Schema](docs/2_Data_Dictionary_&_Schema.md)**
+   The absolute source of truth for the Parquet outputs, complete with ER Diagrams and example SQL queries.
+3. **[Technical Architecture](docs/3_Technical_Architecture.md)**
+   A "How-To" guide explaining PyArrow streaming, the internal execution pipeline, and how to add new events.
+4. **[Configuration Tuning Guide](docs/4_Configuration_Tuning_Guide.md)**
+   A scenario-based guide explaining how to shift data scales or adjust claim frequencies via YAMLs.
+5. **[HCA Knowledge Model](docs/5_HCA_Knowledge_Model.md)**
+   Explains how the synthetic data connects to the Hila Conversational Analytics (HCA) package using double-entry accounting.
